@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project_wombat/tcp_connection.dart';
+import 'package:project_wombat/utils/tcp_connection.dart';
 
 class ConnectPage extends StatelessWidget {
   const ConnectPage({super.key});
@@ -34,9 +34,9 @@ class ConnectPage extends StatelessWidget {
                 receivePort = value;
               }),
           TextButton(
-            onPressed: () => print(
+            onPressed: () => 
                 TcpConnection(ip, int.parse(sendPort), int.parse(receivePort))
-                    .toString()),
+                    .start(),
             child: Text("Connect"),
           ),
           Container(

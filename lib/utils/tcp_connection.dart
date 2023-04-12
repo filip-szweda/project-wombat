@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:rsa_encrypt/rsa_encrypt.dart';
-import 'package:pointycastle/api.dart' as crypto;
+import 'package:pointycastle/key_generators/rsa_key_generator.dart';
+import 'package:pointycastle/asymmetric/api.dart';
 
 class TcpConnection {
   final String receiverIP;
@@ -9,7 +10,7 @@ class TcpConnection {
 
   Socket? listeningSocket;
   Socket? sendingSocket;
-  crypto.AsymmetricKeyPair? keyPair;
+  // crypto.AsymmetricKeyPair? keyPair;
 
   TcpConnection(this.receiverIP, this.sendPort, this.receivePort);
 
@@ -17,10 +18,14 @@ class TcpConnection {
     //listeningSocket = await Socket.connect(receiverIP, receivePort);
     //sendingSocket = await Socket.connect(receiverIP, sendPort);
 
-    var helper = RsaKeyHelper();
-    keyPair = await helper.computeRSAKeyPair(helper.getSecureRandom());
+    // var helper = RsaKeyHelper();
+    // keyPair = await helper.computeRSAKeyPair(helper.getSecureRandom());
 
-    print(keyPair.toString());
+    var keyGen = new RSAKeyGenerator();
+
+    final pair = keyGen.generateKeyPair(); 
+    final rsaPublic = pair.publicKey as RSAPublicKey;
+    final rsaPrivate = pair.privateKey as RSAPrivateKey;
   }
 
   @override
