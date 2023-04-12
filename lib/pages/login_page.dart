@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project_wombat/config.dart' as config;
+import 'package:project_wombat/pages/send_page.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -26,7 +27,12 @@ class LoginPage extends StatelessWidget {
             },
           ),
           TextButton(
-            onPressed: () {if(checkPassword(inputPassword, config.password)) == True;},
+            onPressed: () {
+              if (checkPassword(inputPassword, config.password)) {
+                Navigator.pushNamed(context, SendPage.routeName);
+              }
+              //TODO print if password not correct
+            },
             child: Text("Login"),
           ),
           Container(
