@@ -13,7 +13,6 @@ class TcpConnection {
 
   Socket? listeningSocket;
   Socket? sendingSocket;
-  // crypto.AsymmetricKeyPair? keyPair;
 
   TcpConnection(this.receiverIP, this.sendPort, this.receivePort);
 
@@ -44,8 +43,8 @@ class TcpConnection {
   }
 
   void start() async {
-    //listeningSocket = await Socket.connect(receiverIP, receivePort);
-    //sendingSocket = await Socket.connect(receiverIP, sendPort);
+    // listeningSocket = await Socket.connect(receiverIP, receivePort);
+    // sendingSocket = await Socket.connect(receiverIP, sendPort);
     if(!await File(config.publicRSAKeyPath).exists() || !await File(config.privateRSAKeyPath).exists() ) {
       generateRSAKeys();
     }

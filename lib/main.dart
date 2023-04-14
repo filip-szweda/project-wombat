@@ -13,8 +13,9 @@ class FileSharer extends StatelessWidget {
     return MaterialApp(
       title: "File sharer",
       routes: {
-        '/': (context) => const ConnectPage(),
+        '/': (context) => const LoginPage(),
         LoginPage.routeName: (context) => const LoginPage(),
+        ConnectPage.routeName: (context) => const ConnectPage(),
         SendPage.routeName: (context) => SendPage(),
       },
     );
