@@ -35,8 +35,7 @@ class ConnectPage extends StatelessWidget {
               }),
           TextButton(
             onPressed: () => 
-                TcpConnection(ip, int.parse(sendPort), int.parse(receivePort))
-                    .start(),
+                TcpConnection(ip, int.parse(sendPort), int.parse(receivePort)).start(),
             child: Text("Connect"),
           ),
           Container(

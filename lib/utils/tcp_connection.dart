@@ -1,7 +1,10 @@
 import 'dart:io';
+import 'package:pointycastle/api.dart';
 import 'package:rsa_encrypt/rsa_encrypt.dart';
-import 'package:pointycastle/key_generators/rsa_key_generator.dart';
 import 'package:pointycastle/asymmetric/api.dart';
+
+import 'package:project_wombat/config.dart' as config;
+
 
 class TcpConnection {
   final String receiverIP;
@@ -14,18 +17,39 @@ class TcpConnection {
 
   TcpConnection(this.receiverIP, this.sendPort, this.receivePort);
 
+  void saveRSAPublicKey(RSAPublicKey rsaPublic) async {
+    final File file = File(config.publicRSAKeyPath);
+    await file.writeAsString(rsaPublic.modulus.toString() + "\n" + rsaPublic.exponent.toString());
+  }
+
+  void saveRSAPrivateKey(RSAPrivateKey rsaPrivate) async {
+    final File file = File(config.privateRSAKeyPath);
+    // TODO: encrypt using AES code cipher in CBC mode
+    var encryptedModulus = rsaPrivate.modulus.toString();
+    var encryptedExponent = rsaPrivate.exponent.toString();
+    await file.writeAsString(encryptedModulus + "\n" + encryptedExponent);
+  }
+
+  void generateRSAKeys() async {
+    var helper = RsaKeyHelper();
+    var keyPair = await helper.computeRSAKeyPair(helper.getSecureRandom());
+    final rsaPublic = keyPair.publicKey as RSAPublicKey;
+    final rsaPrivate = keyPair.privateKey as RSAPrivateKey;
+    saveRSAPublicKey(rsaPublic);
+    saveRSAPrivateKey(rsaPrivate);
+  }
+
+  void loadRSAKeys() async {
+    
+  }
+
   void start() async {
     //listeningSocket = await Socket.connect(receiverIP, receivePort);
     //sendingSocket = await Socket.connect(receiverIP, sendPort);
-
-    // var helper = RsaKeyHelper();
-    // keyPair = await helper.computeRSAKeyPair(helper.getSecureRandom());
-
-    var keyGen = new RSAKeyGenerator();
-
-    final pair = keyGen.generateKeyPair(); 
-    final rsaPublic = pair.publicKey as RSAPublicKey;
-    final rsaPrivate = pair.privateKey as RSAPrivateKey;
+    if(!await File(config.publicRSAKeyPath).exists() || !await File(config.privateRSAKeyPath).exists() ) {
+      generateRSAKeys();
+    }
+    loadRSAKeys();
   }
 
   @override
