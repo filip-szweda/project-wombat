@@ -15,7 +15,7 @@ class SendPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Connect"),
+        title: Text("Send Messages"),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),

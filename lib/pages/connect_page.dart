@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:project_wombat/pages/login_page.dart';
+import 'package:project_wombat/pages/send_page.dart';
 import 'package:project_wombat/utils/tcp_connection.dart';
 
 class ConnectPage extends StatelessWidget {
@@ -13,7 +15,7 @@ class ConnectPage extends StatelessWidget {
     String receivePort = "";
     return Scaffold(
       appBar: AppBar(
-        title: Text("connect"),
+        title: Text("Connect"),
       ),
       body: Column(
         children: [
@@ -34,8 +36,10 @@ class ConnectPage extends StatelessWidget {
                 receivePort = value;
               }),
           TextButton(
-            onPressed: () => 
-                TcpConnection(ip, int.parse(sendPort), int.parse(receivePort)).start(),
+            onPressed: () {
+              TcpConnection(ip, int.parse(sendPort), int.parse(receivePort)).start();
+              Navigator.pushNamed(context, SendPage.routeName);
+            },
             child: Text("Connect"),
           ),
           Container(
