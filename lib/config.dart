@@ -1,6 +1,4 @@
-import 'package:project_wombat/utils/cryptography.dart';
-
-String password = "bsktop";
-String localKey = getHash(password);
 String publicRSAKeyPath = "public-rsa-key.txt";
 String privateRSAKeyPath = "private-rsa-key.txt";
+final String publicKeysPath = "public_keys";
+final String privateKeysPath = "private_keys";

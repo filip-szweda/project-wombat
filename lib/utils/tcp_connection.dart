@@ -1,10 +1,9 @@
 import 'dart:io';
-import 'package:pointycastle/api.dart';
-import 'package:rsa_encrypt/rsa_encrypt.dart';
+
+import 'package:flutter/cupertino.dart';
 import 'package:pointycastle/asymmetric/api.dart';
-
 import 'package:project_wombat/config.dart' as config;
-
+import 'package:rsa_encrypt/rsa_encrypt.dart';
 
 class TcpConnection {
   final String receiverIP;
@@ -18,7 +17,10 @@ class TcpConnection {
 
   void saveRSAPublicKey(RSAPublicKey rsaPublic) async {
     final File file = File(config.publicRSAKeyPath);
-    await file.writeAsString(rsaPublic.modulus.toString() + "\n" + rsaPublic.exponent.toString());
+    await file.writeAsString(
+        rsaPublic.modulus.toString() + "\n" + rsaPublic.exponent.toString());
+
+    UniqueKey().toString();
   }
 
   void saveRSAPrivateKey(RSAPrivateKey rsaPrivate) async {
@@ -38,14 +40,13 @@ class TcpConnection {
     saveRSAPrivateKey(rsaPrivate);
   }
 
-  void loadRSAKeys() async {
-    
-  }
+  void loadRSAKeys() async {}
 
   void start() async {
     // listeningSocket = await Socket.connect(receiverIP, receivePort);
     // sendingSocket = await Socket.connect(receiverIP, sendPort);
-    if(!await File(config.publicRSAKeyPath).exists() || !await File(config.privateRSAKeyPath).exists() ) {
+    if (!await File(config.publicRSAKeyPath).exists() ||
+        !await File(config.privateRSAKeyPath).exists()) {
       generateRSAKeys();
     }
     loadRSAKeys();

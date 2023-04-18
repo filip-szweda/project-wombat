@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:project_wombat/config.dart' as config;
+import 'package:pointycastle/api.dart';
 import 'package:project_wombat/pages/connect_page.dart';
+import 'package:project_wombat/utils/cryptography.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -27,11 +28,10 @@ class LoginPage extends StatelessWidget {
             },
           ),
           TextButton(
-            onPressed: () {
-              if (checkPassword(inputPassword, config.password)) {
-                Navigator.pushNamed(context, ConnectPage.routeName);
-              }
-              //TODO print if password not correct
+            onPressed: () async {
+              AsymmetricKeyPair<PublicKey, PrivateKey> keyPair =
+                  await Cryptography(inputPassword).getKeyPair();
+              Navigator.pushNamed(context, ConnectPage.routeName, arguments: keyPair);
             },
             child: Text("Login"),
           ),

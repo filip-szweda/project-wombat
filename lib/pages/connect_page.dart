@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project_wombat/pages/login_page.dart';
+import 'package:pointycastle/api.dart';
 import 'package:project_wombat/pages/send_page.dart';
 import 'package:project_wombat/utils/tcp_connection.dart';
 
@@ -10,6 +10,9 @@ class ConnectPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AsymmetricKeyPair<PublicKey, PrivateKey> keyPair =
+        ModalRoute.of(context)!.settings.arguments
+            as AsymmetricKeyPair<PublicKey, PrivateKey>;
     String ip = "";
     String sendPort = "";
     String receivePort = "";
@@ -37,7 +40,8 @@ class ConnectPage extends StatelessWidget {
               }),
           TextButton(
             onPressed: () {
-              TcpConnection(ip, int.parse(sendPort), int.parse(receivePort)).start();
+              TcpConnection(ip, int.parse(sendPort), int.parse(receivePort))
+                  .start();
               Navigator.pushNamed(context, SendPage.routeName);
             },
             child: Text("Connect"),
