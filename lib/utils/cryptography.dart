@@ -14,7 +14,6 @@ import 'package:rsa_encrypt/rsa_encrypt.dart';
 class Cryptography {
   late encrypt.Encrypter encrypter;
   late encrypt.IV iv;
-  late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
 
   Cryptography(String password) {
     crypto.Digest passwordHash = _calculateHash(password);
@@ -32,23 +31,20 @@ class Cryptography {
   }
 
   Future<AsymmetricKeyPair<PublicKey, PrivateKey>> getKeyPair() async {
-    String file = await findFileForHash();
-    bool privateKeyNotFound = file.isEmpty;
+    String fileName = await _findFileForHash();
+    bool privateKeyNotFound = fileName.isEmpty;
 
     if (privateKeyNotFound) {
-      keyPair = await _generateAndSaveKeyPair();
+      return await _generateAndSaveKeyPair();
     } else {
-      keyPair = await _retrieveKeyPair(file);
+      return await _retrieveKeyPair(fileName);
     }
-    return keyPair;
   }
 
   Future<AsymmetricKeyPair<PublicKey, PrivateKey>> _retrieveKeyPair(
       String file) async {
-    Uint8List bytes =
-        File("${config.privateKeysPath}/$file").readAsBytesSync();
-    String privateKey =
-        encrypter.decrypt(encrypt.Encrypted(bytes), iv: iv);
+    Uint8List bytes = File("${config.privateKeysPath}/$file").readAsBytesSync();
+    String privateKey = encrypter.decrypt(encrypt.Encrypted(bytes), iv: iv);
     String publicKey =
         File("${config.publicKeysPath}/$file.pem").readAsStringSync();
     RsaKeyHelper helper = RsaKeyHelper();
@@ -59,7 +55,8 @@ class Cryptography {
   Future<AsymmetricKeyPair<PublicKey, PrivateKey>>
       _generateAndSaveKeyPair() async {
     RsaKeyHelper helper = RsaKeyHelper();
-    keyPair = await helper.computeRSAKeyPair(helper.getSecureRandom());
+    AsymmetricKeyPair<PublicKey, PrivateKey> keyPair =
+        await helper.computeRSAKeyPair(helper.getSecureRandom());
 
     String publicKey =
         helper.encodePublicKeyToPemPKCS1(keyPair.publicKey as RSAPublicKey);
@@ -88,32 +85,30 @@ class Cryptography {
     return crypto.sha256.convert(bytes);
   }
 
-  Future<String> findFileForHash() async {
-    createDirectoryStructure();
-    List<String> filePaths = await Directory(config.privateKeysPath)
-        .list()
-        .map((file) => file.path)
-        .toList();
-    for (String filePath in filePaths) {
-      if (await checkIfEncryptedCorrectly(filePath)) {
+  Future<String> _findFileForHash() async {
+    _createDirectoryStructure();
+    List<FileSystemEntity> files =
+        await Directory(config.privateKeysPath).listSync();
+    for (FileSystemEntity file in files) {
+      String filePath = file.path;
+      if (await _checkIfEncryptedCorrectly(filePath)) {
         return basename(filePath);
       }
     }
     return "";
   }
 
-  Future<bool> checkIfEncryptedCorrectly(String filePath) async {
+  Future<bool> _checkIfEncryptedCorrectly(String filePath) async {
     Uint8List bytes = File(filePath).readAsBytesSync();
     try {
-      await encrypter
-          .decrypt(encrypt.Encrypted(bytes), iv: iv);
+      await encrypter.decrypt(encrypt.Encrypted(bytes), iv: iv);
     } catch (e) {
       return false;
     }
     return true;
   }
 
-  void createDirectoryStructure() {
+  void _createDirectoryStructure() {
     Directory(config.privateKeysPath).createSync();
     Directory(config.publicKeysPath).createSync();
   }
