@@ -90,6 +90,7 @@ class Cryptography {
   }
 
   Future<String> findFileForHash() async {
+    createDirectoryStructure();
     List<String> filePaths = await Directory(config.privateKeysPath)
         .list()
         .map((file) => file.path)
@@ -111,5 +112,10 @@ class Cryptography {
       return false;
     }
     return true;
+  }
+
+  void createDirectoryStructure() {
+    Directory(config.privateKeysPath).createSync();
+    Directory(config.publicKeysPath).createSync();
   }
 }
