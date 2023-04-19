@@ -12,7 +12,7 @@ import 'package:project_wombat/config.dart' as config;
 import 'package:rsa_encrypt/rsa_encrypt.dart';
 
 class Cryptography {
-  late crypto.Digest passwordHash;
+  //late crypto.Digest passwordHash;
   late encrypt.Encrypter encrypter;
   late encrypt.IV iv;
   late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
@@ -104,8 +104,12 @@ class Cryptography {
 
   Future<bool> checkIfEncryptedCorrectly(String filePath) async {
     Uint8List bytes = await File(filePath).readAsBytes();
-    return await encrypter
-        .decrypt(encrypt.Encrypted(bytes), iv: iv)
-        .contains("PRIVATE KEY");
+    try {
+      await encrypter
+          .decrypt(encrypt.Encrypted(bytes), iv: iv);
+    } catch (e) {
+      return false;
+    }
+    return true;
   }
 }
