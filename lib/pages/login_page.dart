@@ -29,9 +29,26 @@ class LoginPage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () async {
+              var crypto = Cryptography(inputPassword);
               AsymmetricKeyPair<PublicKey, PrivateKey> keyPair =
-                  await Cryptography(inputPassword).getKeyPair();
-              Navigator.pushNamed(context, ConnectPage.routeName, arguments: keyPair);
+                  await crypto.getKeyPair();
+              showDialog<String>(
+                context: context,
+                builder: (BuildContext context) => AlertDialog(
+                  title: const Text('Logged in'),
+                  content: Text(crypto.message),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context, 'OK');
+                        Navigator.pushNamed(context, ConnectPage.routeName,
+                            arguments: keyPair);
+                      },
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
             },
             child: Text("Login"),
           ),

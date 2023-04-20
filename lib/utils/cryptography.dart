@@ -14,6 +14,7 @@ import 'package:rsa_encrypt/rsa_encrypt.dart';
 class Cryptography {
   late encrypt.Encrypter encrypter;
   late encrypt.IV iv;
+  String message = "";
 
   Cryptography(String password) {
     crypto.Digest passwordHash = _calculateHash(password);
@@ -35,8 +36,10 @@ class Cryptography {
     bool privateKeyNotFound = fileName.isEmpty;
 
     if (privateKeyNotFound) {
+      message = "New user. Creating new key pair";
       return await _generateAndSaveKeyPair();
     } else {
+      message = "Known user. Decoding user's keys";
       return await _retrieveKeyPair(fileName);
     }
   }
