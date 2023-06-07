@@ -15,7 +15,7 @@ class FileSharer extends StatelessWidget {
       routes: {
         '/': (context) => const LoginPage(),
         LoginPage.routeName: (context) => const LoginPage(),
-        ConnectPage.routeName: (context) => const ConnectPage(),
+        ConnectPage.routeName: (context) => ConnectPage(),
         SendPage.routeName: (context) => SendPage(),
       },
     );

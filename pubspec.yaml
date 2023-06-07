@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^0.13.5
+  peerdart: ^0.5.0
   rsa_encrypt: ^2.0.0
   tcp_socket_connection: ^0.3.1
 
