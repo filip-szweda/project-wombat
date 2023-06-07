@@ -1,12 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:pointycastle/api.dart';
 import 'package:project_wombat/pages/send_page.dart';
 import 'package:project_wombat/utils/tcp_connection.dart';
 
 class ConnectPage extends StatelessWidget {
-  const ConnectPage({super.key});
+  ConnectPage({super.key});
 
   static const String routeName = '/connect';
+  final tcpConnection = TcpConnection();
 
   @override
   Widget build(BuildContext context) {
@@ -14,8 +16,6 @@ class ConnectPage extends StatelessWidget {
         ModalRoute.of(context)!.settings.arguments
             as AsymmetricKeyPair<PublicKey, PrivateKey>;
     String ip = "";
-    String sendPort = "";
-    String receivePort = "";
     return Scaffold(
       appBar: AppBar(
         title: Text("Connect"),
@@ -28,20 +28,9 @@ class ConnectPage extends StatelessWidget {
               ip = value;
             },
           ),
-          TextFormField(
-              decoration: const InputDecoration(labelText: 'Send port'),
-              onChanged: (value) {
-                sendPort = value;
-              }),
-          TextFormField(
-              decoration: const InputDecoration(labelText: 'Receive port'),
-              onChanged: (value) {
-                receivePort = value;
-              }),
           TextButton(
             onPressed: () {
-              TcpConnection(ip, int.parse(sendPort), int.parse(receivePort))
-                  .start();
+              tcpConnection.startConnection(ip);
               Navigator.pushNamed(context, SendPage.routeName);
             },
             child: Text("Connect"),

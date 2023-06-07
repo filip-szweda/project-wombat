@@ -1,22 +1,42 @@
 import 'dart:io';
 
 class TcpConnection {
-  final String receiverIP;
-  final int sendPort; // one you are sending to
-  final int receivePort; // one from which other clients sends data
+  Socket? socket; // socket for sending messages
+  ServerSocket? serverSocket; // socket for receiving messages
 
-  Socket? listeningSocket;
-  Socket? sendingSocket;
-
-  TcpConnection(this.receiverIP, this.sendPort, this.receivePort);
-
-  void start() async {
-    // listeningSocket = await Socket.connect(receiverIP, receivePort);
-    // sendingSocket = await Socket.connect(receiverIP, sendPort);
+  TcpConnection() {
+    // todo: user's IP should not be hardcoded
+    ServerSocket.bind("192.168.1.102", 4567).then(
+      (ServerSocket s) {
+        serverSocket = s;
+        s.listen(handleClient);
+      }
+    );
   }
 
-  @override
-  String toString() {
-    return 'TcpConnection{receiverIP: $receiverIP, sendPort: $sendPort, receivePort: $receivePort}';
+  void startConnection(String receiverIP) async {
+    Socket.connect(receiverIP, 4567).then((s) {
+      print('Connected to: '
+        '${s.remoteAddress.address}:${s.remotePort}');
+
+      socket = s;
+
+      s.listen((data) {
+        print(new String.fromCharCodes(data).trim());
+      },
+      onDone: () {
+        print("Connection closed");
+        s.destroy();
+      });
+    });
+  }
+
+  void handleClient(Socket client) {
+    // todo: move user to send page
+    // todo: save client, to user can send messages to them on the send page
+    print('Connection from '
+      '${client.remoteAddress.address}:${client.remotePort}');
+
+    client.write("Hello from simple server!\n"); // test message sent to client
   }
 }
