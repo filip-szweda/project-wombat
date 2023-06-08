@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:pointycastle/api.dart';
 import 'package:uuid/uuid.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
+import 'package:rsa_encrypt/rsa_encrypt.dart';
+import 'package:pointycastle/asymmetric/api.dart';
 
 class TcpConnection {
   late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
@@ -62,17 +64,18 @@ class TcpConnection {
 
   void connectToUser(String receiverIP) async {
     serverSocket!.close(); //close server, because you are connected
-    Socket.connect(receiverIP, 4567).then((connectedUser) {
+    RsaKeyHelper helper = RsaKeyHelper();
+    Socket.connect(receiverIP, 4567).then((contactSocket) {
       print('Connected to: '
-        '${connectedUser.remoteAddress.address}:${connectedUser.remotePort}');
+        '${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 
-      socket = connectedUser;
+      socket = contactSocket;
 
       // send public key after initiating a connection
-      connectedUser.write(keyPair.publicKey);
+      contactSocket.write(helper.encodePublicKeyToPemPKCS1(keyPair.publicKey as RSAPublicKey));
 
       // listen for messages
-      connectedUser.listen((data) {
+      contactSocket.listen((data) {
         if(!hasConnectedUsersKey) {
           connectedUsersKey = data as PublicKey;
           hasConnectedUsersKey = true;
@@ -82,7 +85,7 @@ class TcpConnection {
           sessionKey = encrypter.decrypt(encrypt.Encrypted(data as Uint8List), iv: iv);
           hasSessionKey = true;
         }
-      }, onDone: () {print("Connection closed"); connectedUser.destroy();});
+      }, onDone: () {print("Connection closed"); contactSocket.destroy();});
     });
   }
 
@@ -91,8 +94,10 @@ class TcpConnection {
   void handleConnectedUser(Socket connectedUserSocket) {
     print('Connection from ${connectedUserSocket.remoteAddress.address}:${connectedUserSocket.remotePort}');
 
+    RsaKeyHelper helper = RsaKeyHelper();
+
     // send public key
-    connectedUserSocket.write(keyPair.publicKey);
+    connectedUserSocket.write(helper.encodePublicKeyToPemPKCS1(keyPair.publicKey as RSAPublicKey));
     
     generateSessionKey();
 
