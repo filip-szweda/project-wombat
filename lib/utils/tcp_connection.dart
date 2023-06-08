@@ -6,8 +6,7 @@ class TcpConnection {
   var onConnectHandler;
 
   TcpConnection({required this.onConnectHandler}) {
-    // todo: user's IP should not be hardcoded
-    ServerSocket.bind("192.168.1.102", 4567).then(
+    ServerSocket.bind("ipV4", 4567).then(
       (ServerSocket s) {
         serverSocket = s;
         s.listen(handleClient);
@@ -33,7 +32,6 @@ class TcpConnection {
   }
 
   void handleClient(Socket client) {
-    // todo: move user to send page
     // todo: save client, to user can send messages to them on the send page
     print('Connection from '
       '${client.remoteAddress.address}:${client.remotePort}');

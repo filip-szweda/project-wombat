@@ -15,21 +15,22 @@ class ConnectPage extends StatefulWidget {
 
 class _ConnectPageState extends State<ConnectPage> {
   var tcpConnection;
+  late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
+
   @override
   void initState() {
-    tcpConnection = TcpConnection(onConnectHandler: sendPage);
+    tcpConnection = TcpConnection(onConnectHandler: nextPage);
     super.initState();
   }
 
-  void sendPage() {
-    Navigator.pushNamed(context, SendPage.routeName, arguments: tcpConnection);
-  }
+  void nextPage() =>
+    Navigator.pushNamed(context, SendPage.routeName,
+        arguments: {"connection": tcpConnection, "keys": keyPair});
 
   @override
   Widget build(BuildContext context) {
-    final AsymmetricKeyPair<PublicKey, PrivateKey> keyPair =
-        ModalRoute.of(context)!.settings.arguments
-            as AsymmetricKeyPair<PublicKey, PrivateKey>;
+    keyPair = ModalRoute.of(context)!.settings.arguments
+    as AsymmetricKeyPair<PublicKey, PrivateKey>;
     String ip = "";
     return Scaffold(
       appBar: AppBar(
@@ -46,7 +47,7 @@ class _ConnectPageState extends State<ConnectPage> {
           TextButton(
             onPressed: () {
               tcpConnection.startConnection(ip);
-              sendPage();
+              nextPage();
             },
             child: Text("Connect"),
           ),
