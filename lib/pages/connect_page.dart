@@ -19,19 +19,20 @@ class _ConnectPageState extends State<ConnectPage> {
 
 @override
   void initState() {
-    tcpConnection = TcpConnection(onConnectHandler: nextPage);
+    tcpConnection = TcpConnection(nextPageCallback: nextPage);
+    tcpConnection.startListeningForConnection();
     super.initState();
   }
 
   void nextPage() =>
     Navigator.pushNamed(context, SendPage.routeName,
-        arguments: {"connection": tcpConnection, "keys": keyPair});
+        arguments: {"connection": tcpConnection});
 
   @override
   Widget build(BuildContext context) {
     keyPair = ModalRoute.of(context)!.settings.arguments
     as AsymmetricKeyPair<PublicKey, PrivateKey>;
-    tcpConnection.keyPair = keyPair;
+    tcpConnection.setKeyPair(keyPair);
     String ip = "";
     return Scaffold(
       appBar: AppBar(
@@ -47,7 +48,7 @@ class _ConnectPageState extends State<ConnectPage> {
           ),
           TextButton(
             onPressed: () {
-              tcpConnection.startConnection(ip);
+              tcpConnection.connectToUser(ip);
               nextPage();
             },
             child: Text("Connect"),

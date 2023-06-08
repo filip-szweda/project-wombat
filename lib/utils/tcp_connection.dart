@@ -1,20 +1,28 @@
 import 'dart:io';
-// import 'dart:math';
+import 'dart:typed_data';
 import 'package:pointycastle/api.dart';
+import 'package:uuid/uuid.dart';
+import 'package:encrypt/encrypt.dart' as encrypt;
 
 class TcpConnection {
-  AsymmetricKeyPair<PublicKey, PrivateKey>? keyPair;
+  late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
   ServerSocket? serverSocket;
   Socket? socket; // socket for sending messages
-  var onConnectHandler;
+  Function nextPageCallback;
 
-   TcpConnection({this.onConnectHandler}) {
-    getIpV4().then((ip) => ServerSocket.bind(ip, 4567).then(
-      (ServerSocket myUser) {
-        serverSocket = myUser;
-        myUser.listen(handleConnectedUser);
-      }
-    ));
+  var iv = encrypt.IV(Uint8List(16));
+
+  PublicKey? connectedUsersKey;
+  
+  bool hasConnectedUsersKey = false;
+
+  bool hasSessionKey = false;
+  late String sessionKey;
+
+  TcpConnection({required this.nextPageCallback});
+
+  void setKeyPair(AsymmetricKeyPair<PublicKey, PrivateKey> keyPair) {
+    this.keyPair = keyPair;
   }
 
   Future<String> getIpV4() async {
@@ -28,10 +36,31 @@ class TcpConnection {
     return "Error. Ip not found";
   }
 
- 
+// BOTH USERS
 
-//connect to other user
-  void startConnection(String receiverIP) async {
+  encrypt.Encrypter prepareEncrypterForKey(AsymmetricKey key) {
+    return encrypt.Encrypter(
+      encrypt.AES(
+        encrypt.Key(
+          key as Uint8List,
+        ),
+        mode: encrypt.AESMode.cbc,
+      ),
+    );
+   }
+
+  void startListeningForConnection() {
+    getIpV4().then((ip) => ServerSocket.bind(ip, 4567).then(
+      (ServerSocket myUser) {
+        serverSocket = myUser;
+        myUser.listen(handleConnectedUser);
+      }
+    ));
+  }
+
+// USER THAT INITIATED CONNECTION
+
+  void connectToUser(String receiverIP) async {
     serverSocket!.close(); //close server, because you are connected
     Socket.connect(receiverIP, 4567).then((connectedUser) {
       print('Connected to: '
@@ -40,31 +69,54 @@ class TcpConnection {
       socket = connectedUser;
 
       // send public key after initiating a connection
-      connectedUser.write(keyPair!.publicKey);
+      connectedUser.write(keyPair.publicKey);
 
-      connectedUser.listen((data) { print(new String.fromCharCodes(data).trim());
+      // listen for messages
+      connectedUser.listen((data) {
+        if(!hasConnectedUsersKey) {
+          connectedUsersKey = data as PublicKey;
+          hasConnectedUsersKey = true;
+        } else if(!hasSessionKey) {
+          // we decrypt session key using our private key
+          encrypt.Encrypter encrypter = prepareEncrypterForKey(keyPair.privateKey);
+          sessionKey = encrypter.decrypt(encrypt.Encrypted(data as Uint8List), iv: iv);
+          hasSessionKey = true;
+        }
       }, onDone: () {print("Connection closed"); connectedUser.destroy();});
     });
   }
 
+// USER THAT ACCEPTED CONNECTION
 
-//user connected to us
-  void handleConnectedUser(Socket connectedUser) {
-    // todo: save client, to user can send messages to them on the send page
-    print('Connection from '
-      '${connectedUser.remoteAddress.address}:${connectedUser.remotePort}');
+  void handleConnectedUser(Socket connectedUserSocket) {
+    print('Connection from ${connectedUserSocket.remoteAddress.address}:${connectedUserSocket.remotePort}');
 
-    connectedUser.write(keyPair!.publicKey);
-
-    connectedUser.listen((data) { print(new String.fromCharCodes(data).trim());
-    }, onDone: () {print("Connection closed"); connectedUser.destroy();});
+    // send public key
+    connectedUserSocket.write(keyPair.publicKey);
     
-    onConnectHandler();
+    generateSessionKey();
+
+    // listen for messages
+    connectedUserSocket.listen((data) {
+      if(!hasConnectedUsersKey) {
+        connectedUsersKey = data as PublicKey;
+        hasConnectedUsersKey = true;
+        initializeConnectionToConnectedUser(connectedUsersKey, connectedUserSocket);
+      }
+    }, onDone: () {print("Connection closed"); connectedUserSocket.destroy();});
+
+    nextPageCallback();
   }
 
-
-
-  // num generatePublicDHKey() {
-  //   return pow(6, keyPair.publicKey) % 13;
-  // }
+  void generateSessionKey() {
+    sessionKey = Uuid().v4();
+    hasSessionKey = true;
+  }
+  
+  void initializeConnectionToConnectedUser(var data, var connectedUser) {
+    // we encrypt session key using our connected user's public key and send it to connected user
+    var encrypter = prepareEncrypterForKey(connectedUsersKey as AsymmetricKey);
+    encrypt.Encrypted encryptedSessionKey = encrypter.encrypt(sessionKey, iv: iv);
+    connectedUser.write(encryptedSessionKey);
+  }
 }
