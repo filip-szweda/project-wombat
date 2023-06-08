@@ -36,8 +36,8 @@ class TcpConnection {
 
   encrypt.Encrypter prepareEncrypterForKey(Uint8List keyChars) {
     encrypt.Key key = encrypt.Key(keyChars);
-    int blockSize = 16;
-    key = key.stretch(key.length + blockSize - key.length % blockSize);
+    // key must be 32 bytes in length
+    key = key.stretch(32);
     return encrypt.Encrypter(
       encrypt.AES(
         key,
