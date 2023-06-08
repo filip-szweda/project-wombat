@@ -9,14 +9,13 @@ import 'package:pointycastle/asymmetric/api.dart';
 class TcpConnection {
   late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
   ServerSocket? serverSocket;
-  Socket? socket; // socket for sending messages
   Function nextPageCallback;
 
   var iv = encrypt.IV(Uint8List(16));
 
-  PublicKey? connectedUsersKey;
+  PublicKey? connectedUsersPublicKey;
   
-  bool hasConnectedUsersKey = false;
+  bool hasConnectedUsersPublicKey = false;
 
   bool hasSessionKey = false;
   late String sessionKey;
@@ -26,6 +25,10 @@ class TcpConnection {
   void setKeyPair(AsymmetricKeyPair<PublicKey, PrivateKey> keyPair) {
     this.keyPair = keyPair;
   }
+
+//  __   __  ___               __   __  __   __ 
+// |__) /  \  |  |__|    |  | (__' |__ |__) (__'
+// |__) \__/  |  |  |    \__/ .__) |__ |  \ .__)
 
   Future<String> getIpV4() async {
     for (var interface in await NetworkInterface.list()) {
@@ -37,8 +40,6 @@ class TcpConnection {
     }
     return "Error. Ip not found";
   }
-
-// BOTH USERS
 
   encrypt.Encrypter prepareEncrypterForKey(AsymmetricKey key) {
     return encrypt.Encrypter(
@@ -60,68 +61,86 @@ class TcpConnection {
     ));
   }
 
-// USER THAT INITIATED CONNECTION
-
-  void connectToUser(String receiverIP) async {
-    serverSocket!.close(); //close server, because you are connected
-    RsaKeyHelper helper = RsaKeyHelper();
-    Socket.connect(receiverIP, 4567).then((contactSocket) {
-      print('Connected to: '
-        '${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
-
-      socket = contactSocket;
-
-      // send public key after initiating a connection
-      contactSocket.write(helper.encodePublicKeyToPemPKCS1(keyPair.publicKey as RSAPublicKey));
-
-      // listen for messages
-      contactSocket.listen((data) {
-        if(!hasConnectedUsersKey) {
-          connectedUsersKey = data as PublicKey;
-          hasConnectedUsersKey = true;
-        } else if(!hasSessionKey) {
-          // we decrypt session key using our private key
-          encrypt.Encrypter encrypter = prepareEncrypterForKey(keyPair.privateKey);
-          sessionKey = encrypter.decrypt(encrypt.Encrypted(data as Uint8List), iv: iv);
-          hasSessionKey = true;
-        }
-      }, onDone: () {print("Connection closed"); contactSocket.destroy();});
-    });
+  String readStringFromChar(Uint8List chars) {
+    return String.fromCharCodes(chars);
   }
 
-// USER THAT ACCEPTED CONNECTION
-
-  void handleConnectedUser(Socket connectedUserSocket) {
-    print('Connection from ${connectedUserSocket.remoteAddress.address}:${connectedUserSocket.remotePort}');
-
-    RsaKeyHelper helper = RsaKeyHelper();
-
-    // send public key
-    connectedUserSocket.write(helper.encodePublicKeyToPemPKCS1(keyPair.publicKey as RSAPublicKey));
-    
-    generateSessionKey();
-
-    // listen for messages
-    connectedUserSocket.listen((data) {
-      if(!hasConnectedUsersKey) {
-        connectedUsersKey = data as PublicKey;
-        hasConnectedUsersKey = true;
-        initializeConnectionToConnectedUser(connectedUsersKey, connectedUserSocket);
-      }
-    }, onDone: () {print("Connection closed"); connectedUserSocket.destroy();});
-
-    nextPageCallback();
+  PublicKey parsePublicKeyFromChars(Uint8List chars) {
+    return RsaKeyHelper().parsePublicKeyFromPem(readStringFromChar(chars));
   }
+
+  String convertPublicKeyToString(PublicKey key) {
+    return RsaKeyHelper().encodePublicKeyToPemPKCS1(key as RSAPublicKey);
+  }
+
+//       __   __  __              ___     _   ___         __      __   __             __  __  ___    __      
+// |  | (__' |__ |__)    | |\ | |  |  |  /_\   |  | |\ | / __    /  ` /  \ |\ | |\ | |__ /  `  |  | /  \ |\ |
+// \__/ .__) |__ |  \    | | \| |  |  | /   \  |  | | \| \__|    \__, \__/ | \| | \| |__ \__,  |  | \__/ | \|
 
   void generateSessionKey() {
     sessionKey = Uuid().v4();
     hasSessionKey = true;
   }
-  
-  void initializeConnectionToConnectedUser(var data, var connectedUser) {
+
+  void connectToUser(String receiverIP) async {
+    serverSocket!.close(); //close server, because you are connected
+    Socket.connect(receiverIP, 4567).then((contactSocket) {
+      print('Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
+
+      sendPublicKey(contactSocket);
+
+      generateSessionKey();
+      hasSessionKey = true;
+
+      // listen for messages
+      contactSocket.listen((data) {
+        if(!hasConnectedUsersPublicKey) {
+          connectedUsersPublicKey = parsePublicKeyFromChars(data);
+          hasConnectedUsersPublicKey = true;
+          sendSessionKey(connectedUsersPublicKey, contactSocket);
+        }
+      }, onDone: () {print("Connection closed"); contactSocket.destroy();});
+    });
+  }
+
+  void sendSessionKey(var data, var connectedUser) {
     // we encrypt session key using our connected user's public key and send it to connected user
-    var encrypter = prepareEncrypterForKey(connectedUsersKey as AsymmetricKey);
+    var encrypter = prepareEncrypterForKey(connectedUsersPublicKey as AsymmetricKey);
     encrypt.Encrypted encryptedSessionKey = encrypter.encrypt(sessionKey, iv: iv);
     connectedUser.write(encryptedSessionKey);
+  }
+
+//       __   __  __       _    __   __   __  __  ___         __      __   __             __  __  ___    __      
+// |  | (__' |__ |__)     /_\  /  ` /  ` |__ |__)  |  | |\ | / __    /  ` /  \ |\ | |\ | |__ /  `  |  | /  \ |\ |
+// \__/ .__) |__ |  \    /   \ \__, \__, |__ |     |  | | \| \__|    \__, \__/ | \| | \| |__ \__,  |  | \__/ | \|
+
+  void sendPublicKey(Socket receiverSocket) {
+    receiverSocket.write(convertPublicKeyToString(keyPair.publicKey));
+  }
+
+  void handleConnectedUser(Socket connectedUserSocket) {
+    print('Connection from ${connectedUserSocket.remoteAddress.address}:${connectedUserSocket.remotePort}');
+
+    sendPublicKey(connectedUserSocket);
+
+    // listen for messages
+    connectedUserSocket.listen((data) {
+      // dostalismy dane
+      // robimy cos z danymi
+      // connectedUserSocket.firstWhere((element) => false)
+      // connectedUserSocket.first;
+
+      if(!hasConnectedUsersPublicKey) {
+        connectedUsersPublicKey = parsePublicKeyFromChars(data);
+        hasConnectedUsersPublicKey = true;
+      } else if(!hasSessionKey) {
+        // we decrypt session key using our private key
+        encrypt.Encrypter encrypter = prepareEncrypterForKey(keyPair.privateKey);
+        sessionKey = encrypter.decrypt(encrypt.Encrypted(data), iv: iv);
+        hasSessionKey = true;
+      }
+    }, onDone: () {print("Connection closed"); connectedUserSocket.destroy();});
+
+    nextPageCallback();
   }
 }
