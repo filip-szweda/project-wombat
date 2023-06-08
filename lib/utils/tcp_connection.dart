@@ -10,16 +10,9 @@ class TcpConnection {
   late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
   ServerSocket? serverSocket;
   Function nextPageCallback;
-
-  var iv = encrypt.IV(Uint8List(16));
-
+  encrypt.IV iv = encrypt.IV(Uint8List(16));
   PublicKey? connectedUsersPublicKey;
-  
-  bool hasConnectedUsersPublicKey = false;
-
-  bool hasSessionKey = false;
   late String sessionKey;
-
   TcpConnection({required this.nextPageCallback});
 
   void setKeyPair(AsymmetricKeyPair<PublicKey, PrivateKey> keyPair) {
@@ -62,7 +55,7 @@ class TcpConnection {
   }
 
   String readStringFromChar(Uint8List chars) {
-    return String.fromCharCodes(chars);
+    return String.fromCharCodes(chars).trim();
   }
 
   PublicKey parsePublicKeyFromChars(Uint8List chars) {
@@ -79,10 +72,9 @@ class TcpConnection {
 
   void generateSessionKey() {
     sessionKey = Uuid().v4();
-    hasSessionKey = true;
   }
 
-  void connectToUser(String receiverIP) async {
+  void connectToUser(String receiverIP) {
     serverSocket!.close(); //close server, because you are connected
     Socket.connect(receiverIP, 4567).then((contactSocket) {
       print('Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
@@ -90,15 +82,18 @@ class TcpConnection {
       sendPublicKey(contactSocket);
 
       generateSessionKey();
-      hasSessionKey = true;
+
+      contactSocket.first.then((publicKeyChars) {connectedUsersPublicKey = parsePublicKeyFromChars(publicKeyChars);} );
+
+      sendSessionKey(connectedUsersPublicKey, contactSocket);
+
+      contactSocket.write("elo elo 123 heloł");
+      contactSocket.write("hahahahahaha");
+      contactSocket.write(":<");
 
       // listen for messages
       contactSocket.listen((data) {
-        if(!hasConnectedUsersPublicKey) {
-          connectedUsersPublicKey = parsePublicKeyFromChars(data);
-          hasConnectedUsersPublicKey = true;
-          sendSessionKey(connectedUsersPublicKey, contactSocket);
-        }
+        print(String.fromCharCodes(data).trim());
       }, onDone: () {print("Connection closed"); contactSocket.destroy();});
     });
   }
@@ -122,23 +117,16 @@ class TcpConnection {
     print('Connection from ${connectedUserSocket.remoteAddress.address}:${connectedUserSocket.remotePort}');
 
     sendPublicKey(connectedUserSocket);
+    
+    connectedUserSocket.first.then((publicKeyChars) {connectedUsersPublicKey = parsePublicKeyFromChars(publicKeyChars);} );
+    connectedUserSocket.first.then((sessionKeyChars) {
+      encrypt.Encrypter encrypter = prepareEncrypterForKey(keyPair.privateKey);
+      sessionKey = encrypter.decrypt(encrypt.Encrypted(sessionKeyChars), iv: iv);
+    });
 
     // listen for messages
     connectedUserSocket.listen((data) {
-      // dostalismy dane
-      // robimy cos z danymi
-      // connectedUserSocket.firstWhere((element) => false)
-      // connectedUserSocket.first;
-
-      if(!hasConnectedUsersPublicKey) {
-        connectedUsersPublicKey = parsePublicKeyFromChars(data);
-        hasConnectedUsersPublicKey = true;
-      } else if(!hasSessionKey) {
-        // we decrypt session key using our private key
-        encrypt.Encrypter encrypter = prepareEncrypterForKey(keyPair.privateKey);
-        sessionKey = encrypter.decrypt(encrypt.Encrypted(data), iv: iv);
-        hasSessionKey = true;
-      }
+      print(String.fromCharCodes(data).trim());
     }, onDone: () {print("Connection closed"); connectedUserSocket.destroy();});
 
     nextPageCallback();
