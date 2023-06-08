@@ -5,13 +5,23 @@ class TcpConnection {
   ServerSocket? serverSocket; // socket for receiving messages
   var onConnectHandler;
 
+  Future<String> getIpV4() async {
+    for (var interface in await NetworkInterface.list()) {
+      if(interface.name == "Ethernet") {
+        // not sure if the first address will be always the correct one
+        return interface.addresses[0].address;
+      }
+    }
+    return "Error. Ip not found";
+  }
+
   TcpConnection({required this.onConnectHandler}) {
-    ServerSocket.bind("ipV4", 4567).then(
+    getIpV4().then((ip) => ServerSocket.bind(ip, 4567).then(
       (ServerSocket s) {
         serverSocket = s;
         s.listen(handleClient);
       }
-    );
+    ));
   }
 
   void startConnection(String receiverIP) async {
