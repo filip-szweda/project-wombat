@@ -85,7 +85,7 @@ class TcpConnection {
       contactSocket.listen((data) {
         if(connectedUsersPublicKey == null) {
           connectedUsersPublicKey = data;
-          sendSessionKey(connectedUsersPublicKey, contactSocket);
+          sendSessionKey(contactSocket);
         } else {
           contactSocket.write("elo elo 123 heloł");
           contactSocket.write("hahahahahaha");
@@ -96,7 +96,7 @@ class TcpConnection {
     });
   }
 
-  void sendSessionKey(var data, var connectedUser) {
+  void sendSessionKey(var connectedUser) {
     // we encrypt session key using our connected user's public key and send it to connected user
     var encrypter = prepareEncrypterForKey(connectedUsersPublicKey!);
     encrypt.Encrypted encryptedSessionKey = encrypter.encrypt(sessionKey!, iv: iv);
