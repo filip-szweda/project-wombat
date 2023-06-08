@@ -11,8 +11,8 @@ class TcpConnection {
   ServerSocket? serverSocket;
   Function nextPageCallback;
   encrypt.IV iv = encrypt.IV(Uint8List(16));
-  late Uint8List? connectedUsersPublicKey;
-  late String? sessionKey;
+  Uint8List? connectedUsersPublicKey;
+  String? sessionKey;
   TcpConnection({required this.nextPageCallback});
 
   void setKeyPair(AsymmetricKeyPair<PublicKey, PrivateKey> keyPair) {
