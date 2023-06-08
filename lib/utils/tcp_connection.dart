@@ -11,8 +11,8 @@ class TcpConnection {
   ServerSocket? serverSocket;
   Function nextPageCallback;
   encrypt.IV iv = encrypt.IV(Uint8List(16));
-  late Uint8List connectedUsersPublicKey;
-  late String sessionKey;
+  late Uint8List? connectedUsersPublicKey;
+  late String? sessionKey;
   TcpConnection({required this.nextPageCallback});
 
   void setKeyPair(AsymmetricKeyPair<PublicKey, PrivateKey> keyPair) {
@@ -79,19 +79,18 @@ class TcpConnection {
       print('Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 
       sendPublicKey(contactSocket);
-
       generateSessionKey();
-
-      await contactSocket.first.then((publicKeyChars) => connectedUsersPublicKey = publicKeyChars );
-
-      sendSessionKey(connectedUsersPublicKey, contactSocket);
-
-      contactSocket.write("elo elo 123 heloł");
-      contactSocket.write("hahahahahaha");
-      contactSocket.write(":<");
 
       // listen for messages
       contactSocket.listen((data) {
+        if(connectedUsersPublicKey == null) {
+          connectedUsersPublicKey = data;
+          sendSessionKey(connectedUsersPublicKey, contactSocket);
+        } else {
+          contactSocket.write("elo elo 123 heloł");
+          contactSocket.write("hahahahahaha");
+          contactSocket.write(":<");
+        }
         print(String.fromCharCodes(data).trim());
       }, onDone: () {print("Connection closed"); contactSocket.destroy();});
     });
@@ -99,8 +98,8 @@ class TcpConnection {
 
   void sendSessionKey(var data, var connectedUser) {
     // we encrypt session key using our connected user's public key and send it to connected user
-    var encrypter = prepareEncrypterForKey(connectedUsersPublicKey);
-    encrypt.Encrypted encryptedSessionKey = encrypter.encrypt(sessionKey, iv: iv);
+    var encrypter = prepareEncrypterForKey(connectedUsersPublicKey!);
+    encrypt.Encrypted encryptedSessionKey = encrypter.encrypt(sessionKey!, iv: iv);
     connectedUser.write(encryptedSessionKey);
   }
 
@@ -116,15 +115,15 @@ class TcpConnection {
     print('Connection from ${connectedUserSocket.remoteAddress.address}:${connectedUserSocket.remotePort}');
 
     sendPublicKey(connectedUserSocket);
-    
-    await connectedUserSocket.first.then((publicKeyChars) => connectedUsersPublicKey = publicKeyChars);
-    await connectedUserSocket.first.then((sessionKeyChars) {
-      encrypt.Encrypter encrypter = prepareEncrypterForKey(convertPrivateKeyToChars(keyPair.privateKey));
-      sessionKey = encrypter.decrypt(encrypt.Encrypted(sessionKeyChars), iv: iv);
-    });
 
     // listen for messages
     connectedUserSocket.listen((data) {
+      if(connectedUsersPublicKey == null) {
+        connectedUsersPublicKey = data;
+      } else if (sessionKey == null) {
+        encrypt.Encrypter encrypter = prepareEncrypterForKey(convertPrivateKeyToChars(keyPair.privateKey));
+        sessionKey = encrypter.decrypt(encrypt.Encrypted(data), iv: iv);
+      }
       print(String.fromCharCodes(data).trim());
     }, onDone: () {print("Connection closed"); connectedUserSocket.destroy();});
 
