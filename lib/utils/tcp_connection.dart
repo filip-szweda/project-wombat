@@ -86,13 +86,13 @@ class TcpConnection {
         if(connectedUsersPublicKey == null) {
           connectedUsersPublicKey = data;
           sendSessionKey(contactSocket);
-        } else {
-          contactSocket.write("elo elo 123 heloł");
-          contactSocket.write("hahahahahaha");
-          contactSocket.write(":<");
         }
         print(String.fromCharCodes(data).trim());
       }, onDone: () {print("Connection closed"); contactSocket.destroy();});
+
+      contactSocket.write("elo elo 123 heloł");
+      contactSocket.write("hahahahahaha");
+      contactSocket.write(":<");
     });
   }
 
