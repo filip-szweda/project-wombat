@@ -11,7 +11,7 @@ class TcpConnection {
   ServerSocket? serverSocket;
   Function nextPageCallback;
   encrypt.IV iv = encrypt.IV(Uint8List(16));
-  PublicKey? connectedUsersPublicKey;
+  late Uint8List connectedUsersPublicKey;
   late String sessionKey;
   TcpConnection({required this.nextPageCallback});
 
@@ -34,11 +34,11 @@ class TcpConnection {
     return "Error. Ip not found";
   }
 
-  encrypt.Encrypter prepareEncrypterForKey(AsymmetricKey key) {
+  encrypt.Encrypter prepareEncrypterForKey(Uint8List key) {
     return encrypt.Encrypter(
       encrypt.AES(
         encrypt.Key(
-          key as Uint8List,
+          key,
         ),
         mode: encrypt.AESMode.cbc,
       ),
@@ -54,16 +54,14 @@ class TcpConnection {
     ));
   }
 
-  String readStringFromChar(Uint8List chars) {
-    return String.fromCharCodes(chars).trim();
-  }
-
-  PublicKey parsePublicKeyFromChars(Uint8List chars) {
-    return RsaKeyHelper().parsePublicKeyFromPem(readStringFromChar(chars));
-  }
-
   String convertPublicKeyToString(PublicKey key) {
     return RsaKeyHelper().encodePublicKeyToPemPKCS1(key as RSAPublicKey);
+  }
+
+  Uint8List convertPrivateKeyToChars(PrivateKey privateKey) {
+    String pemFormat = RsaKeyHelper().encodePrivateKeyToPemPKCS1(privateKey as RSAPrivateKey);
+    final List<int> codeUnits = pemFormat.codeUnits;
+    return Uint8List.fromList(codeUnits);
   }
 
 //       __   __  __              ___     _   ___         __      __   __             __  __  ___    __      
@@ -76,14 +74,14 @@ class TcpConnection {
 
   void connectToUser(String receiverIP) {
     serverSocket!.close(); //close server, because you are connected
-    Socket.connect(receiverIP, 4567).then((contactSocket) {
+    Socket.connect(receiverIP, 4567).then((contactSocket) async {
       print('Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 
       sendPublicKey(contactSocket);
 
       generateSessionKey();
 
-      contactSocket.first.then((publicKeyChars) {connectedUsersPublicKey = parsePublicKeyFromChars(publicKeyChars);} );
+      await contactSocket.first.then((publicKeyChars) => connectedUsersPublicKey = publicKeyChars );
 
       sendSessionKey(connectedUsersPublicKey, contactSocket);
 
@@ -100,7 +98,7 @@ class TcpConnection {
 
   void sendSessionKey(var data, var connectedUser) {
     // we encrypt session key using our connected user's public key and send it to connected user
-    var encrypter = prepareEncrypterForKey(connectedUsersPublicKey as AsymmetricKey);
+    var encrypter = prepareEncrypterForKey(connectedUsersPublicKey);
     encrypt.Encrypted encryptedSessionKey = encrypter.encrypt(sessionKey, iv: iv);
     connectedUser.write(encryptedSessionKey);
   }
@@ -113,14 +111,14 @@ class TcpConnection {
     receiverSocket.write(convertPublicKeyToString(keyPair.publicKey));
   }
 
-  void handleConnectedUser(Socket connectedUserSocket) {
+  void handleConnectedUser(Socket connectedUserSocket) async {
     print('Connection from ${connectedUserSocket.remoteAddress.address}:${connectedUserSocket.remotePort}');
 
     sendPublicKey(connectedUserSocket);
     
-    connectedUserSocket.first.then((publicKeyChars) {connectedUsersPublicKey = parsePublicKeyFromChars(publicKeyChars);} );
-    connectedUserSocket.first.then((sessionKeyChars) {
-      encrypt.Encrypter encrypter = prepareEncrypterForKey(keyPair.privateKey);
+    await connectedUserSocket.first.then((publicKeyChars) => connectedUsersPublicKey = publicKeyChars);
+    await connectedUserSocket.first.then((sessionKeyChars) {
+      encrypt.Encrypter encrypter = prepareEncrypterForKey(convertPrivateKeyToChars(keyPair.privateKey));
       sessionKey = encrypter.decrypt(encrypt.Encrypted(sessionKeyChars), iv: iv);
     });
 
