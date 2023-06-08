@@ -4,11 +4,26 @@ import 'package:pointycastle/api.dart';
 import 'package:project_wombat/pages/send_page.dart';
 import 'package:project_wombat/utils/tcp_connection.dart';
 
-class ConnectPage extends StatelessWidget {
+class ConnectPage extends StatefulWidget {
   ConnectPage({super.key});
 
   static const String routeName = '/connect';
-  final tcpConnection = TcpConnection();
+
+  @override
+  State<ConnectPage> createState() => _ConnectPageState();
+}
+
+class _ConnectPageState extends State<ConnectPage> {
+  var tcpConnection;
+  @override
+  void initState() {
+    tcpConnection = TcpConnection(onConnectHandler: sendPage);
+    super.initState();
+  }
+
+  void sendPage() {
+    Navigator.pushNamed(context, SendPage.routeName, arguments: tcpConnection);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +46,7 @@ class ConnectPage extends StatelessWidget {
           TextButton(
             onPressed: () {
               tcpConnection.startConnection(ip);
-              Navigator.pushNamed(context, SendPage.routeName);
+              sendPage();
             },
             child: Text("Connect"),
           ),
