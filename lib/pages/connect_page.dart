@@ -19,7 +19,7 @@ class _ConnectPageState extends State<ConnectPage> {
 
   @override
   void initState() {
-    tcpConnection = TcpConnection(onConnectHandler: nextPage);
+    tcpConnection = TcpConnection(keyPair: keyPair, onConnectHandler: nextPage);
     super.initState();
   }
 

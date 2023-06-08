@@ -1,8 +1,11 @@
 import 'dart:io';
+// import 'dart:math';
+import 'package:pointycastle/api.dart';
 
 class TcpConnection {
+  AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
+  ServerSocket? serverSocket;
   Socket? socket; // socket for sending messages
-  ServerSocket? serverSocket; // socket for receiving messages
   var onConnectHandler;
 
   Future<String> getIpV4() async {
@@ -15,38 +18,50 @@ class TcpConnection {
     return "Error. Ip not found";
   }
 
-  TcpConnection({required this.onConnectHandler}) {
+  TcpConnection({required this.keyPair, this.onConnectHandler}) {
     getIpV4().then((ip) => ServerSocket.bind(ip, 4567).then(
-      (ServerSocket s) {
-        serverSocket = s;
-        s.listen(handleClient);
+      (ServerSocket myUser) {
+        serverSocket = myUser;
+        myUser.listen(handleConnectedUser);
       }
     ));
   }
 
+//connect to other user
   void startConnection(String receiverIP) async {
-    Socket.connect(receiverIP, 4567).then((s) {
+    serverSocket!.close(); //close server, because you are connected
+    Socket.connect(receiverIP, 4567).then((connectedUser) {
       print('Connected to: '
-        '${s.remoteAddress.address}:${s.remotePort}');
+        '${connectedUser.remoteAddress.address}:${connectedUser.remotePort}');
 
-      socket = s;
+      socket = connectedUser;
 
-      s.listen((data) {
-        print(new String.fromCharCodes(data).trim());
-      },
-      onDone: () {
-        print("Connection closed");
-        s.destroy();
-      });
+      // send public key after initiating a connection
+      connectedUser.write(keyPair.publicKey);
+
+      connectedUser.listen((data) { print(new String.fromCharCodes(data).trim());
+      }, onDone: () {print("Connection closed"); connectedUser.destroy();});
     });
   }
 
-  void handleClient(Socket client) {
+
+//user connected to us
+  void handleConnectedUser(Socket connectedUser) {
     // todo: save client, to user can send messages to them on the send page
     print('Connection from '
-      '${client.remoteAddress.address}:${client.remotePort}');
+      '${connectedUser.remoteAddress.address}:${connectedUser.remotePort}');
 
-    client.write("Hello from simple server!\n"); // test message sent to client
+    connectedUser.write(keyPair.publicKey);
+
+    connectedUser.listen((data) { print(new String.fromCharCodes(data).trim());
+    }, onDone: () {print("Connection closed"); connectedUser.destroy();});
+    
     onConnectHandler();
   }
+
+
+
+  // num generatePublicDHKey() {
+  //   return pow(6, keyPair.publicKey) % 13;
+  // }
 }
