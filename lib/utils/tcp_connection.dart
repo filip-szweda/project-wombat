@@ -34,12 +34,13 @@ class TcpConnection {
     return "Error. Ip not found";
   }
 
-  encrypt.Encrypter prepareEncrypterForKey(Uint8List key) {
+  encrypt.Encrypter prepareEncrypterForKey(Uint8List keyChars) {
+    encrypt.Key key = encrypt.Key(keyChars);
+    int blockSize = 16;
+    key = key.stretch(key.length + blockSize - key.length % blockSize);
     return encrypt.Encrypter(
       encrypt.AES(
-        encrypt.Key(
-          key,
-        ),
+        key,
         mode: encrypt.AESMode.cbc,
       ),
     );
