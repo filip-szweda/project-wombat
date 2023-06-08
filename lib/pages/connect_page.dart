@@ -17,9 +17,9 @@ class _ConnectPageState extends State<ConnectPage> {
   var tcpConnection;
   late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
 
-  @override
+@override
   void initState() {
-    tcpConnection = TcpConnection(keyPair: keyPair, onConnectHandler: nextPage);
+    tcpConnection = TcpConnection(onConnectHandler: nextPage);
     super.initState();
   }
 
@@ -31,6 +31,7 @@ class _ConnectPageState extends State<ConnectPage> {
   Widget build(BuildContext context) {
     keyPair = ModalRoute.of(context)!.settings.arguments
     as AsymmetricKeyPair<PublicKey, PrivateKey>;
+    tcpConnection.keyPair = keyPair;
     String ip = "";
     return Scaffold(
       appBar: AppBar(

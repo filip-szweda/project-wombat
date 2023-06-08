@@ -3,10 +3,19 @@ import 'dart:io';
 import 'package:pointycastle/api.dart';
 
 class TcpConnection {
-  AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
+  AsymmetricKeyPair<PublicKey, PrivateKey>? keyPair;
   ServerSocket? serverSocket;
   Socket? socket; // socket for sending messages
   var onConnectHandler;
+
+   TcpConnection({this.onConnectHandler}) {
+    getIpV4().then((ip) => ServerSocket.bind(ip, 4567).then(
+      (ServerSocket myUser) {
+        serverSocket = myUser;
+        myUser.listen(handleConnectedUser);
+      }
+    ));
+  }
 
   Future<String> getIpV4() async {
     for (var interface in await NetworkInterface.list()) {
@@ -18,14 +27,7 @@ class TcpConnection {
     return "Error. Ip not found";
   }
 
-  TcpConnection({required this.keyPair, this.onConnectHandler}) {
-    getIpV4().then((ip) => ServerSocket.bind(ip, 4567).then(
-      (ServerSocket myUser) {
-        serverSocket = myUser;
-        myUser.listen(handleConnectedUser);
-      }
-    ));
-  }
+ 
 
 //connect to other user
   void startConnection(String receiverIP) async {
@@ -37,7 +39,7 @@ class TcpConnection {
       socket = connectedUser;
 
       // send public key after initiating a connection
-      connectedUser.write(keyPair.publicKey);
+      connectedUser.write(keyPair!.publicKey);
 
       connectedUser.listen((data) { print(new String.fromCharCodes(data).trim());
       }, onDone: () {print("Connection closed"); connectedUser.destroy();});
@@ -51,7 +53,7 @@ class TcpConnection {
     print('Connection from '
       '${connectedUser.remoteAddress.address}:${connectedUser.remotePort}');
 
-    connectedUser.write(keyPair.publicKey);
+    connectedUser.write(keyPair!.publicKey);
 
     connectedUser.listen((data) { print(new String.fromCharCodes(data).trim());
     }, onDone: () {print("Connection closed"); connectedUser.destroy();});
