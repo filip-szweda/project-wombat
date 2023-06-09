@@ -1,7 +1,7 @@
 import 'package:encrypt/encrypt.dart';
 import 'package:flutter/material.dart';
 import 'package:pointycastle/api.dart';
-import 'package:project_wombat/pages/send_page.dart';
+import 'package:project_wombat/pages/communication/communication_page.dart';
 import 'package:project_wombat/utils/tcp_connection.dart';
 
 class ConnectPage extends StatefulWidget {
@@ -21,13 +21,13 @@ class _ConnectPageState extends State<ConnectPage> {
 
   @override
   void initState() {
-    tcpConnection = TcpConnection(goToSendPage: toSendPage);
+    tcpConnection = TcpConnection(goToCommunicationPage: goToCommunicationPage);
     tcpConnection.startListeningForConnection();
     actualDropdownValue = cipherModes.first;
     super.initState();
   }
 
-  void toSendPage() => Navigator.pushNamed(context, SendPage.routeName,
+  void goToCommunicationPage() => Navigator.pushNamed(context, CommunicationPage.routeName,
       arguments: tcpConnection);
 
   @override

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project_wombat/pages/connect_page.dart';
 import 'package:project_wombat/pages/login_page.dart';
-import 'package:project_wombat/pages/send_page.dart';
+import 'package:project_wombat/pages/communication/communication_page.dart';
 
 void main() => runApp(const FileSharer());
 
@@ -16,7 +16,7 @@ class FileSharer extends StatelessWidget {
         '/': (context) => const LoginPage(),
         LoginPage.routeName: (context) => const LoginPage(),
         ConnectPage.routeName: (context) => ConnectPage(),
-        SendPage.routeName: (context) => SendPage(),
+        CommunicationPage.routeName: (context) => CommunicationPage(),
       },
     );
   }

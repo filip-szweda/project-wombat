@@ -10,12 +10,12 @@ import 'package:uuid/uuid.dart';
 class TcpConnection {
   late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
   ServerSocket? serverSocket;
-  Function goToSendPage;
+  Function goToCommunicationPage;
   encrypt.IV iv = encrypt.IV(Uint8List(16));
   Uint8List? connectedUsersPublicKey;
   String? sessionKey;
 
-  TcpConnection({required this.goToSendPage});
+  TcpConnection({required this.goToCommunicationPage});
 
   encrypt.AESMode cipherMode = encrypt.AESMode.cbc;
 
@@ -91,7 +91,7 @@ class TcpConnection {
       sendPublicKey(contactSocket);
       generateSessionKey();
 
-      goToSendPage();
+      goToCommunicationPage();
 
       // listen for messages
       contactSocket.listen((data) {
@@ -133,7 +133,7 @@ class TcpConnection {
 
     sendPublicKey(connectedUserSocket);
 
-    goToSendPage();
+    goToCommunicationPage();
 
     // listen for messages
     connectedUserSocket.listen((data) {
