@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:pointycastle/api.dart';
 import 'package:project_wombat/pages/connect_page.dart';
 import 'package:project_wombat/utils/cryptography.dart';
+
+import '../utils/key_pair.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -30,8 +31,7 @@ class LoginPage extends StatelessWidget {
           TextButton(
             onPressed: () async {
               var crypto = Cryptography(inputPassword);
-              AsymmetricKeyPair<PublicKey, PrivateKey> keyPair =
-                  await crypto.getKeyPair();
+              KeyPair keyPair = await crypto.getKeyPair();
               showDialog<String>(
                 context: context,
                 builder: (BuildContext context) => AlertDialog(

@@ -4,22 +4,23 @@ import 'dart:typed_data';
 import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:pointycastle/api.dart';
 import 'package:pointycastle/asymmetric/api.dart';
+import 'package:project_wombat/utils/key_pair.dart';
 import 'package:rsa_encrypt/rsa_encrypt.dart';
 import 'package:uuid/uuid.dart';
 
 class TcpConnection {
-  late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
+  late KeyPair keyPair;
   ServerSocket? serverSocket;
   Function goToCommunicationPage;
   encrypt.IV iv = encrypt.IV(Uint8List(16));
   Uint8List? connectedUsersPublicKey;
   String? sessionKey;
 
-  TcpConnection({required this.goToCommunicationPage});
-
   encrypt.AESMode cipherMode = encrypt.AESMode.cbc;
 
-  void setKeyPair(AsymmetricKeyPair<PublicKey, PrivateKey> keyPair) {
+  TcpConnection({required this.goToCommunicationPage});
+
+  void setKeyPair(KeyPair keyPair) {
     this.keyPair = keyPair;
   }
 
@@ -124,7 +125,7 @@ class TcpConnection {
 // \__/ .__) |__ |  \    /   \ \__, \__, |__ |     |  | | \| \__|    \__, \__/ | \| | \| |__ \__,  |  | \__/ | \|
 
   void sendPublicKey(Socket receiverSocket) {
-    receiverSocket.write(convertPublicKeyToString(keyPair.publicKey));
+    receiverSocket.write(keyPair.publicKeyAsString());
   }
 
   void handleConnectedUser(Socket connectedUserSocket) async {
@@ -140,8 +141,8 @@ class TcpConnection {
       if (connectedUsersPublicKey == null) {
         connectedUsersPublicKey = data;
       } else if (sessionKey == null) {
-        encrypt.Encrypter encrypter = prepareEncrypterForKey(
-            convertPrivateKeyToChars(keyPair.privateKey));
+        encrypt.Encrypter encrypter =
+            prepareEncrypterForKey(keyPair.privateKeyAsBytes());
         sessionKey = encrypter.decrypt(encrypt.Encrypted(data), iv: iv);
       }
       print(String.fromCharCodes(data).trim());
