@@ -7,7 +7,6 @@ class CommunicationPage extends StatelessWidget {
 
   static const String routeName = '/send';
 
-
   //TcpConnection tcpConnection;
 
   @override
@@ -22,14 +21,11 @@ class CommunicationPage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Flexible(
-              flex: 2,
-              child: ReceiveMessagesWidget(),
+            ReceiveMessagesWidget(),
+            SizedBox(
+              height: 20,
             ),
-            Flexible(
-              flex: 1,
-              child: SendMessagesWidget(),
-            ),
+            SendMessagesWidget(),
           ],
         ),
       ), // This trailing comma makes auto-formatting nicer for build methods.

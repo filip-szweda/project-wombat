@@ -1,26 +1,116 @@
 import 'package:flutter/material.dart';
 
-class ReceiveMessagesWidget extends StatefulWidget {
-  const ReceiveMessagesWidget({Key? key}) : super(key: key);
+class ReceiveMessagesWidget extends StatelessWidget {
+  ReceiveMessagesWidget({Key? key}) : super(key: key);
 
-  @override
-  State<ReceiveMessagesWidget> createState() => _ReceiveMessagesWidgetState();
-}
+  final List<String> messages = [
+    "halo",
+    "lemoniada",
+    "swietna pogoda",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "halo",
+    "lemoniada",
+    "swietna pogoda",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "halo",
+    "lemoniada",
+    "swietna pogoda",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "halo",
+    "lemoniada",
+    "swietna pogoda",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "halo",
+    "lemoniada",
+    "swietna pogoda",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "halo",
+    "lemoniada",
+    "swietna pogoda",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "halo",
+    "lemoniada",
+    "swietna pogoda",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "halo",
+    "lemoniada",
+    "swietna pogoda",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "halo",
+    "lemoniada",
+    "swietna pogoda",
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  ];
 
-class _ReceiveMessagesWidgetState extends State<ReceiveMessagesWidget> {
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Form(
-          child: TextFormField(
-            decoration: const InputDecoration(labelText: 'Send a message'),
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: ListView(
+            //reverse: true,
+            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+            children: messages.map((message) => MessageBubble(message, "test", false)).toList()),
+      ),
+    );
+  }
+}
+
+class MessageBubble extends StatelessWidget {
+  MessageBubble(this.message, this.sender, this.isUser, {Key? key})
+      : super(key: key);
+
+  final String message;
+  final String sender;
+  final bool isUser;
+
+  @override
+  Widget build(BuildContext context) {
+    BorderRadiusGeometry borderRadiusGeometry = isUser == true
+        ? BorderRadius.only(
+      topLeft: Radius.circular(30),
+      bottomRight: Radius.circular(30),
+      bottomLeft: Radius.circular(30),
+    )
+        : BorderRadius.only(
+      topRight: Radius.circular(30),
+      bottomRight: Radius.circular(30),
+      bottomLeft: Radius.circular(30),
+    );
+
+    Color color = isUser == true ? Colors.lightBlueAccent : Colors.white;
+    Color fontColor = isUser == true ? Colors.white : Colors.black54;
+
+    CrossAxisAlignment crossAxisAlignment =
+    isUser == true ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: crossAxisAlignment,
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Text(
+            sender,
+            style: TextStyle(fontSize: 12, color: Colors.black54),
           ),
-        ),
-        const SizedBox(height: 24),
-      ],
+          Material(
+            borderRadius: borderRadiusGeometry,
+            elevation: 5,
+            color: color,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              child: Text(
+                message,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: fontColor,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
