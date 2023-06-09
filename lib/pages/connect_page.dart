@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:encrypt/encrypt.dart';
 import 'package:flutter/material.dart';
 import 'package:pointycastle/api.dart';
 import 'package:project_wombat/pages/send_page.dart';
@@ -14,26 +14,29 @@ class ConnectPage extends StatefulWidget {
 }
 
 class _ConnectPageState extends State<ConnectPage> {
-  var tcpConnection;
+  late TcpConnection tcpConnection;
   late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
+  List<AESMode> cipherModes = [AESMode.cbc, AESMode.ecb];
+  late AESMode actualDropdownValue;
 
-@override
+  @override
   void initState() {
-    tcpConnection = TcpConnection(nextPageCallback: nextPage);
+    tcpConnection = TcpConnection(goToSendPage: toSendPage);
     tcpConnection.startListeningForConnection();
+    actualDropdownValue = cipherModes.first;
     super.initState();
   }
 
-  void nextPage() =>
-    Navigator.pushNamed(context, SendPage.routeName,
-        arguments: {"connection": tcpConnection});
+  void toSendPage() => Navigator.pushNamed(context, SendPage.routeName,
+      arguments: {"connection": tcpConnection});
 
   @override
   Widget build(BuildContext context) {
     keyPair = ModalRoute.of(context)!.settings.arguments
-    as AsymmetricKeyPair<PublicKey, PrivateKey>;
+        as AsymmetricKeyPair<PublicKey, PrivateKey>;
     tcpConnection.setKeyPair(keyPair);
     String ip = "";
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Connect"),
@@ -48,8 +51,8 @@ class _ConnectPageState extends State<ConnectPage> {
           ),
           TextButton(
             onPressed: () {
+              tcpConnection.setCipherMode(actualDropdownValue);
               tcpConnection.connectToUser(ip);
-              nextPage();
             },
             child: Text("Connect"),
           ),
@@ -58,7 +61,19 @@ class _ConnectPageState extends State<ConnectPage> {
               height: 30,
             ),
             color: Colors.purple,
-          )
+          ),
+          DropdownButton(
+              value: actualDropdownValue,
+              items:
+                  cipherModes.map<DropdownMenuItem<AESMode>>((AESMode value) {
+                return DropdownMenuItem<AESMode>(
+                  value: value,
+                  child: Text(value.toString()),
+                );
+              }).toList(),
+              onChanged: (mode) => setState(() {
+                    actualDropdownValue = mode!;
+                  })),
         ],
       ),
     );
