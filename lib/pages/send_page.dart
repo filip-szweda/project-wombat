@@ -11,8 +11,11 @@ class SendPage extends StatelessWidget {
     Uri.parse('wss://echo.websocket.events'),
   );
 
+  //TcpConnection tcpConnection;
+
   @override
   Widget build(BuildContext context) {
+    //tcpConnection = ModalRoute.of(context)!.settings.arguments as TcpConnection;
     return Scaffold(
       appBar: AppBar(
         title: Text("Send Messages"),
@@ -20,21 +23,10 @@ class SendPage extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Form(
-              child: TextFormField(
-                controller: _controller,
-                decoration: const InputDecoration(labelText: 'Send a message'),
-              ),
-            ),
-            const SizedBox(height: 24),
-            StreamBuilder(
-              stream: _channel.stream,
-              builder: (context, snapshot) {
-                return Text(snapshot.hasData ? '${snapshot.data}' : '');
-              },
-            )
+            ReceiveMessagesWidget(),
+            SendMessagesWidget(),
           ],
         ),
       ),
@@ -55,5 +47,80 @@ class SendPage extends StatelessWidget {
   void dispose() {
     _channel.sink.close();
     _controller.dispose();
+  }
+}
+
+class ReceiveMessagesWidget extends StatefulWidget {
+  const ReceiveMessagesWidget({Key? key}) : super(key: key);
+
+  @override
+  State<ReceiveMessagesWidget> createState() => _ReceiveMessagesWidgetState();
+}
+
+class _ReceiveMessagesWidgetState extends State<ReceiveMessagesWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Form(
+          child: TextFormField(
+            decoration: const InputDecoration(labelText: 'Send a message'),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+}
+
+class SendMessagesWidget extends StatelessWidget {
+  const SendMessagesWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        Flexible(
+          flex: 6,
+          child: TextField(
+            keyboardType: TextInputType.multiline,
+            minLines: 8,
+            maxLines: 8,
+            decoration: const InputDecoration(
+              alignLabelWithHint: true,
+              labelText: 'Type a message',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        Flexible(
+          flex: 1,
+          child: SizedBox(),
+        ),
+        Flexible(
+          flex: 1,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton(
+                onPressed: () {},
+                child: Text("Send"),
+              ),
+              SizedBox(
+                height: 10,
+              ),
+              ElevatedButton(
+                onPressed: () {},
+                child: Text("Send file"),
+              )
+            ],
+          ),
+        )
+      ],
+    );
   }
 }

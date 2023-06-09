@@ -28,7 +28,7 @@ class _ConnectPageState extends State<ConnectPage> {
   }
 
   void toSendPage() => Navigator.pushNamed(context, SendPage.routeName,
-      arguments: {"connection": tcpConnection});
+      arguments: tcpConnection);
 
   @override
   Widget build(BuildContext context) {
