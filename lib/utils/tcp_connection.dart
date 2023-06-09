@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -5,6 +6,7 @@ import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:pointycastle/api.dart';
 import 'package:pointycastle/asymmetric/api.dart';
 import 'package:project_wombat/utils/key_pair.dart';
+import 'package:project_wombat/utils/message.dart';
 import 'package:rsa_encrypt/rsa_encrypt.dart';
 import 'package:uuid/uuid.dart';
 
@@ -13,8 +15,8 @@ class TcpConnection {
   ServerSocket? serverSocket;
   Function goToCommunicationPage;
   encrypt.IV iv = encrypt.IV(Uint8List(16));
-  Uint8List? connectedUsersPublicKey;
-  String? sessionKey;
+  String? connectedPublicKey;
+  String sessionKey = "Not initialized";
 
   encrypt.AESMode cipherMode = encrypt.AESMode.cbc;
 
@@ -90,34 +92,37 @@ class TcpConnection {
           'Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 
       sendPublicKey(contactSocket);
-      generateSessionKey();
+      sendSessionKey(contactSocket);
 
       goToCommunicationPage();
 
       // listen for messages
-      contactSocket.listen((data) {
-        if (connectedUsersPublicKey == null) {
-          connectedUsersPublicKey = data;
-          sendSessionKey(contactSocket);
-        }
-        print(String.fromCharCodes(data).trim());
-      }, onDone: () {
+      contactSocket.listen((data) => receiveMessage(data), onDone: () {
         print("Connection closed");
         contactSocket.destroy();
       });
 
-      contactSocket.write("elo elo 123 heloł");
-      contactSocket.write("hahahahahaha");
-      contactSocket.write(":<");
+      sendMessage(Message(value: "elo elo 123 heloł"), contactSocket);
+      sendMessage(Message(value: "hahahahahaha"), contactSocket);
+      sendMessage(Message(value: ":<"), contactSocket);
     });
   }
 
-  void sendSessionKey(var connectedUser) {
-    // we encrypt session key using our connected user's public key and send it to connected user
-    var encrypter = prepareEncrypterForKey(connectedUsersPublicKey!);
+  void sendSessionKey(Socket destination) async {
+    generateSessionKey();
+    while (connectedPublicKey == null) {
+      await Future.delayed(Duration(milliseconds: 100));
+    }
+    var encrypter =
+        prepareEncrypterForKey(convertStringToBytes(connectedPublicKey!));
     encrypt.Encrypted encryptedSessionKey =
-        encrypter.encrypt(sessionKey!, iv: iv);
-    connectedUser.write(encryptedSessionKey);
+        encrypter.encrypt(sessionKey, iv: iv);
+
+    sendMessage(
+        Message(
+            type: Message.SESSION_KEY,
+            value: convertBytesToString(encryptedSessionKey.bytes)),
+        destination);
   }
 
 //       __   __  __       _    __   __   __  __  ___         __      __   __             __  __  ___    __
@@ -125,7 +130,9 @@ class TcpConnection {
 // \__/ .__) |__ |  \    /   \ \__, \__, |__ |     |  | | \| \__|    \__, \__/ | \| | \| |__ \__,  |  | \__/ | \|
 
   void sendPublicKey(Socket receiverSocket) {
-    receiverSocket.write(keyPair.publicKeyAsString());
+    sendMessage(
+        Message(type: Message.PUBLIC_KEY, value: keyPair.publicKeyAsString()),
+        receiverSocket);
   }
 
   void handleConnectedUser(Socket connectedUserSocket) async {
@@ -137,18 +144,51 @@ class TcpConnection {
     goToCommunicationPage();
 
     // listen for messages
-    connectedUserSocket.listen((data) {
-      if (connectedUsersPublicKey == null) {
-        connectedUsersPublicKey = data;
-      } else if (sessionKey == null) {
-        encrypt.Encrypter encrypter =
-            prepareEncrypterForKey(keyPair.privateKeyAsBytes());
-        sessionKey = encrypter.decrypt(encrypt.Encrypted(data), iv: iv);
-      }
-      print(String.fromCharCodes(data).trim());
-    }, onDone: () {
+    connectedUserSocket.listen((data) => receiveMessage(data), onDone: () {
       print("Connection closed");
       connectedUserSocket.destroy();
     });
+  }
+
+  Uint8List convertStringToBytes(String str) {
+    final List<int> codeUnits = str.codeUnits;
+    return Uint8List.fromList(codeUnits);
+  }
+
+  String convertBytesToString(Uint8List bytes) {
+    return String.fromCharCodes(bytes).trim();
+  }
+
+  void sendMessage(Message message, Socket destination) {
+    String json = jsonEncode(message);
+    destination.write(json);
+  }
+
+  void receiveMessage(Uint8List data) {
+    Message message = decodeMessage(data);
+    handleMessage(message);
+  }
+
+  Message decodeMessage(Uint8List data) {
+    return jsonDecode(convertBytesToString(data));
+  }
+
+  void handleMessage(Message message) {
+    switch (message.type) {
+      case Message.PUBLIC_KEY:
+        connectedPublicKey = message.value;
+        print(message.value);
+        break;
+      case Message.SESSION_KEY:
+        encrypt.Encrypter encrypter =
+            prepareEncrypterForKey(keyPair.privateKeyAsBytes());
+        sessionKey = encrypter
+            .decrypt(encrypt.Encrypted.fromUtf8(message.value), iv: iv);
+        print(message.value);
+        break;
+      case Message.DEFAULT:
+        print(message.value);
+        break;
+    }
   }
 }
