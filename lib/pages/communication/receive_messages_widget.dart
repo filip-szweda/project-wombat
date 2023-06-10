@@ -3,44 +3,7 @@ import 'package:flutter/material.dart';
 class ReceiveMessagesWidget extends StatelessWidget {
   ReceiveMessagesWidget({Key? key}) : super(key: key);
 
-  final List<String> messages = [
-    "halo",
-    "lemoniada",
-    "swietna pogoda",
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "halo",
-    "lemoniada",
-    "swietna pogoda",
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "halo",
-    "lemoniada",
-    "swietna pogoda",
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "halo",
-    "lemoniada",
-    "swietna pogoda",
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "halo",
-    "lemoniada",
-    "swietna pogoda",
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "halo",
-    "lemoniada",
-    "swietna pogoda",
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "halo",
-    "lemoniada",
-    "swietna pogoda",
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "halo",
-    "lemoniada",
-    "swietna pogoda",
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "halo",
-    "lemoniada",
-    "swietna pogoda",
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  ];
+  final List<String> messages = [];
 
   @override
   Widget build(BuildContext context) {

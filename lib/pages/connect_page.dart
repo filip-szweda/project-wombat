@@ -1,8 +1,9 @@
 import 'package:encrypt/encrypt.dart';
 import 'package:flutter/material.dart';
-import 'package:pointycastle/api.dart';
 import 'package:project_wombat/pages/communication/communication_page.dart';
 import 'package:project_wombat/utils/tcp_connection.dart';
+
+import '../utils/key_pair.dart';
 
 class ConnectPage extends StatefulWidget {
   ConnectPage({super.key});
@@ -15,7 +16,7 @@ class ConnectPage extends StatefulWidget {
 
 class _ConnectPageState extends State<ConnectPage> {
   late TcpConnection tcpConnection;
-  late AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
+  late KeyPair keyPair;
   List<AESMode> cipherModes = [AESMode.cbc, AESMode.ecb];
   late AESMode actualDropdownValue;
 
@@ -27,13 +28,13 @@ class _ConnectPageState extends State<ConnectPage> {
     super.initState();
   }
 
-  void goToCommunicationPage() => Navigator.pushNamed(context, CommunicationPage.routeName,
-      arguments: tcpConnection);
+  void goToCommunicationPage() =>
+      Navigator.pushNamed(context, CommunicationPage.routeName,
+          arguments: tcpConnection);
 
   @override
   Widget build(BuildContext context) {
-    keyPair = ModalRoute.of(context)!.settings.arguments
-        as AsymmetricKeyPair<PublicKey, PrivateKey>;
+    keyPair = ModalRoute.of(context)!.settings.arguments as KeyPair;
     tcpConnection.setKeyPair(keyPair);
     String ip = "";
 

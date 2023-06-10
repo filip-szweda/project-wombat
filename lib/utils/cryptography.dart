@@ -9,6 +9,7 @@ import 'package:path/path.dart';
 import 'package:pointycastle/api.dart';
 import 'package:pointycastle/asymmetric/api.dart';
 import 'package:project_wombat/config.dart' as config;
+import 'package:project_wombat/utils/key_pair.dart';
 import 'package:rsa_encrypt/rsa_encrypt.dart';
 
 class Cryptography {
@@ -31,17 +32,18 @@ class Cryptography {
     );
   }
 
-  Future<AsymmetricKeyPair<PublicKey, PrivateKey>> getKeyPair() async {
+  Future<KeyPair> getKeyPair() async {
     String fileName = await _findFileForHash();
     bool privateKeyNotFound = fileName.isEmpty;
-
+    AsymmetricKeyPair<PublicKey, PrivateKey> temporaryKeyPair;
     if (privateKeyNotFound) {
       message = "New user. Creating new key pair";
-      return await _generateAndSaveKeyPair();
+      temporaryKeyPair = await _generateAndSaveKeyPair();
     } else {
       message = "Known user. Decoding user's keys";
-      return await _retrieveKeyPair(fileName);
+      temporaryKeyPair = await _retrieveKeyPair(fileName);
     }
+    return KeyPair(keyPair: temporaryKeyPair);
   }
 
   Future<AsymmetricKeyPair<PublicKey, PrivateKey>> _retrieveKeyPair(
