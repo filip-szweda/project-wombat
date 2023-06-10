@@ -2,9 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:encrypt/encrypt.dart' as encrypt;
-import 'package:pointycastle/api.dart';
-import 'package:pointycastle/asymmetric/api.dart';
+import 'package:encrypt/encrypt.dart' as encrypt_package;
 import 'package:project_wombat/utils/key_pair.dart';
 import 'package:project_wombat/utils/message.dart';
 import 'package:rsa_encrypt/rsa_encrypt.dart';
@@ -14,11 +12,11 @@ class TcpConnection {
   late KeyPair keyPair;
   ServerSocket? serverSocket;
   Function goToCommunicationPage;
-  encrypt.IV iv = encrypt.IV(Uint8List(16));
-  String? connectedPublicKey;
+  encrypt_package.IV iv = encrypt_package.IV(Uint8List(16));
+  KeyPair? connectedPublicKey;
   String sessionKey = "Not initialized";
 
-  encrypt.AESMode cipherMode = encrypt.AESMode.cbc;
+  encrypt_package.AESMode cipherMode = encrypt_package.AESMode.cbc;
 
   TcpConnection({required this.goToCommunicationPage});
 
@@ -26,7 +24,7 @@ class TcpConnection {
     this.keyPair = keyPair;
   }
 
-  void setCipherMode(encrypt.AESMode mode) {
+  void setCipherMode(encrypt_package.AESMode mode) {
     this.cipherMode = mode;
   }
 
@@ -45,13 +43,13 @@ class TcpConnection {
     return "Error. Ip not found";
   }
 
-  encrypt.Encrypter prepareEncrypterForKey(Uint8List keyChars) {
-    encrypt.Key key = encrypt.Key(keyChars);
+  encrypt_package.Encrypter prepareEncrypterForKey(Uint8List keyChars) {
+    encrypt_package.Key key = encrypt_package.Key(keyChars);
     print("original key length: ${key.length}");
     // key must be 32 bytes in length
     key = key.stretch(32);
-    return encrypt.Encrypter(
-      encrypt.AES(
+    return encrypt_package.Encrypter(
+      encrypt_package.AES(
         key,
         mode: cipherMode,
       ),
@@ -66,23 +64,56 @@ class TcpConnection {
             }));
   }
 
-  String convertPublicKeyToString(PublicKey key) {
-    return RsaKeyHelper().encodePublicKeyToPemPKCS1(key as RSAPublicKey);
+  void sendPublicKey(Socket receiverSocket) {
+    sendMessage(
+        Message(type: Message.PUBLIC_KEY, value: keyPair.publicKeyAsPem()),
+        receiverSocket);
   }
 
-  Uint8List convertPrivateKeyToChars(PrivateKey privateKey) {
-    String pemFormat =
-        RsaKeyHelper().encodePrivateKeyToPemPKCS1(privateKey as RSAPrivateKey);
-    final List<int> codeUnits = pemFormat.codeUnits;
-    return Uint8List.fromList(codeUnits);
+  void sendMessage(Message message, Socket destination) {
+    String json = jsonEncode(message);
+    destination.write(json);
+  }
+
+  void receiveMessage(Uint8List data) {
+    Message message = decodeMessage(data);
+    handleMessage(message);
+  }
+
+  Message decodeMessage(Uint8List data) {
+    return jsonDecode(String.fromCharCodes(data).trim());
+  }
+
+  void handleMessage(Message message) {
+    switch (message.type) {
+      case Message.PUBLIC_KEY:
+        connectedPublicKey = KeyPair.fromPublicKeyPem(message.value);
+        print(message.value);
+        break;
+      case Message.SESSION_KEY:
+        String decrypted = decrypt(message.value, keyPair.privateKey!);
+        print(message.value);
+        print(decrypted);
+        break;
+      case Message.DEFAULT:
+        print(message.value);
+        break;
+    }
   }
 
 //       __   __  __              ___     _   ___         __      __   __             __  __  ___    __
 // |  | (__' |__ |__)    | |\ | |  |  |  /_\   |  | |\ | / __    /  ` /  \ |\ | |\ | |__ /  `  |  | /  \ |\ |
 // \__/ .__) |__ |  \    | | \| |  |  | /   \  |  | | \| \__|    \__, \__/ | \| | \| |__ \__,  |  | \__/ | \|
 
-  void generateSessionKey() {
+  void sendSessionKey(Socket destination) async {
     sessionKey = Uuid().v4();
+    while (connectedPublicKey == null) {
+      await Future.delayed(Duration(milliseconds: 100));
+    }
+    String cipher_text = encrypt(sessionKey, connectedPublicKey!.publicKey);
+
+    sendMessage(
+        Message(type: Message.SESSION_KEY, value: cipher_text), destination);
   }
 
   void connectToUser(String receiverIP) {
@@ -108,32 +139,9 @@ class TcpConnection {
     });
   }
 
-  void sendSessionKey(Socket destination) async {
-    generateSessionKey();
-    while (connectedPublicKey == null) {
-      await Future.delayed(Duration(milliseconds: 100));
-    }
-    var encrypter =
-        prepareEncrypterForKey(convertStringToBytes(connectedPublicKey!));
-    encrypt.Encrypted encryptedSessionKey =
-        encrypter.encrypt(sessionKey, iv: iv);
-
-    sendMessage(
-        Message(
-            type: Message.SESSION_KEY,
-            value: convertBytesToString(encryptedSessionKey.bytes)),
-        destination);
-  }
-
 //       __   __  __       _    __   __   __  __  ___         __      __   __             __  __  ___    __
 // |  | (__' |__ |__)     /_\  /  ` /  ` |__ |__)  |  | |\ | / __    /  ` /  \ |\ | |\ | |__ /  `  |  | /  \ |\ |
 // \__/ .__) |__ |  \    /   \ \__, \__, |__ |     |  | | \| \__|    \__, \__/ | \| | \| |__ \__,  |  | \__/ | \|
-
-  void sendPublicKey(Socket receiverSocket) {
-    sendMessage(
-        Message(type: Message.PUBLIC_KEY, value: keyPair.publicKeyAsString()),
-        receiverSocket);
-  }
 
   void handleConnectedUser(Socket connectedUserSocket) async {
     print(
@@ -148,47 +156,5 @@ class TcpConnection {
       print("Connection closed");
       connectedUserSocket.destroy();
     });
-  }
-
-  Uint8List convertStringToBytes(String str) {
-    final List<int> codeUnits = str.codeUnits;
-    return Uint8List.fromList(codeUnits);
-  }
-
-  String convertBytesToString(Uint8List bytes) {
-    return String.fromCharCodes(bytes).trim();
-  }
-
-  void sendMessage(Message message, Socket destination) {
-    String json = jsonEncode(message);
-    destination.write(json);
-  }
-
-  void receiveMessage(Uint8List data) {
-    Message message = decodeMessage(data);
-    handleMessage(message);
-  }
-
-  Message decodeMessage(Uint8List data) {
-    return jsonDecode(convertBytesToString(data));
-  }
-
-  void handleMessage(Message message) {
-    switch (message.type) {
-      case Message.PUBLIC_KEY:
-        connectedPublicKey = message.value;
-        print(message.value);
-        break;
-      case Message.SESSION_KEY:
-        encrypt.Encrypter encrypter =
-            prepareEncrypterForKey(keyPair.privateKeyAsBytes());
-        sessionKey = encrypter
-            .decrypt(encrypt.Encrypted.fromUtf8(message.value), iv: iv);
-        print(message.value);
-        break;
-      case Message.DEFAULT:
-        print(message.value);
-        break;
-    }
   }
 }

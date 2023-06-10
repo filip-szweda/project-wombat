@@ -1,23 +1,23 @@
-import 'dart:typed_data';
-
 import 'package:pointycastle/api.dart';
 import 'package:pointycastle/asymmetric/api.dart';
 import 'package:rsa_encrypt/rsa_encrypt.dart';
 
 class KeyPair {
-  AsymmetricKeyPair<PublicKey, PrivateKey> keyPair;
+  RSAPrivateKey? privateKey;
+  RSAPublicKey publicKey;
 
-  KeyPair({required this.keyPair});
+  KeyPair({required AsymmetricKeyPair<PublicKey, PrivateKey> keyPair})
+      : privateKey = keyPair.privateKey as RSAPrivateKey,
+        publicKey = keyPair.publicKey as RSAPublicKey;
 
-  String publicKeyAsString() {
-    return RsaKeyHelper()
-        .encodePublicKeyToPemPKCS1(keyPair.privateKey as RSAPublicKey);
+  KeyPair.fromPublicKey({required this.publicKey});
+
+  static KeyPair fromPublicKeyPem(String publicKeyPem) {
+    RSAPublicKey key = RsaKeyHelper().parsePublicKeyFromPem(publicKeyPem);
+    return KeyPair.fromPublicKey(publicKey: key);
   }
 
-  Uint8List privateKeyAsBytes() {
-    String pemFormat = RsaKeyHelper()
-        .encodePrivateKeyToPemPKCS1(keyPair.privateKey as RSAPrivateKey);
-    final List<int> codeUnits = pemFormat.codeUnits;
-    return Uint8List.fromList(codeUnits);
+  String publicKeyAsPem() {
+    return RsaKeyHelper().encodePublicKeyToPemPKCS1(publicKey);
   }
 }
