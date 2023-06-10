@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:encrypt/encrypt.dart' as encrypt_package;
 import 'package:project_wombat/utils/key_pair.dart';
 import 'package:project_wombat/utils/message.dart';
+import 'package:project_wombat/config.dart' as config;
 import 'package:rsa_encrypt/rsa_encrypt.dart';
 import 'package:uuid/uuid.dart';
 
@@ -72,16 +73,19 @@ class TcpConnection {
 
   void sendMessage(Message message, Socket destination) {
     String json = jsonEncode(message);
-    destination.write(json);
+    destination.write(json + config.messageSeparator);
   }
 
-  void receiveMessage(Uint8List data) {
-    Message message = decodeMessage(data);
-    handleMessage(message);
+  void receiveMessages(Uint8List data) {
+    List<String> messageStrings = String.fromCharCodes(data).trim().split(config.messageSeparator);
+    for(final messageString in messageStrings){
+      Message message = decodeMessage(messageString);
+      handleMessage(message);
+    }
   }
 
-  Message decodeMessage(Uint8List data) {
-    Map<String, dynamic> json = jsonDecode(String.fromCharCodes(data).trim()) as Map<String, dynamic>;
+  Message decodeMessage(String messageString) {
+    Map<String, dynamic> json = jsonDecode(messageString) as Map<String, dynamic>;
     return Message.fromJson(json);
   }
 
@@ -129,7 +133,7 @@ class TcpConnection {
       goToCommunicationPage();
 
       // listen for messages
-      contactSocket.listen((data) => receiveMessage(data), onDone: () {
+      contactSocket.listen((data) => receiveMessages(data), onDone: () {
         print("Connection closed");
         contactSocket.destroy();
       });
@@ -153,7 +157,7 @@ class TcpConnection {
     goToCommunicationPage();
 
     // listen for messages
-    connectedUserSocket.listen((data) => receiveMessage(data), onDone: () {
+    connectedUserSocket.listen((data) => receiveMessages(data), onDone: () {
       print("Connection closed");
       connectedUserSocket.destroy();
     });
