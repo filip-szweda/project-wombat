@@ -81,7 +81,8 @@ class TcpConnection {
   }
 
   Message decodeMessage(Uint8List data) {
-    return jsonDecode(String.fromCharCodes(data).trim()) as Message;
+    Map<String, dynamic> json = jsonDecode(String.fromCharCodes(data).trim()) as Map<String, dynamic>;
+    return Message.fromJson(json);
   }
 
   void handleMessage(Message message) {
