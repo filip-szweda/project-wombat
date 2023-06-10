@@ -81,7 +81,7 @@ class TcpConnection {
   }
 
   Message decodeMessage(Uint8List data) {
-    return jsonDecode(String.fromCharCodes(data).trim());
+    return jsonDecode(String.fromCharCodes(data).trim()) as Message;
   }
 
   void handleMessage(Message message) {
