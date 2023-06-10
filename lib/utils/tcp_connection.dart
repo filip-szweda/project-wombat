@@ -79,8 +79,10 @@ class TcpConnection {
   void receiveMessages(Uint8List data) {
     List<String> messageStrings = String.fromCharCodes(data).trim().split(config.messageSeparator);
     for(final messageString in messageStrings){
-      Message message = decodeMessage(messageString);
-      handleMessage(message);
+      if(messageString.length > 0) {
+        Message message = decodeMessage(messageString);
+        handleMessage(message);
+      }
     }
   }
 
