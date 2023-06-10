@@ -41,12 +41,12 @@ class TcpConnection {
         return interface.addresses[0].address;
       }
     }
-    return "Error. Ip not found";
+    return "[ERROR] IPv4 address for Ethernet or Wi-Fi interface not found";
   }
 
   encrypt_package.Encrypter prepareEncrypterForKey(Uint8List keyChars) {
     encrypt_package.Key key = encrypt_package.Key(keyChars);
-    print("original key length: ${key.length}");
+    print("[INFO] Original key length: ${key.length}");
     // key must be 32 bytes in length
     key = key.stretch(32);
     return encrypt_package.Encrypter(
@@ -58,31 +58,33 @@ class TcpConnection {
   }
 
   void startListeningForConnection() {
-    getIpV4()
-        .then((ip) => ServerSocket.bind(ip, 4567).then((ServerSocket myUser) {
+    getIpV4().then(
+      (ip) => ServerSocket.bind(ip, 4567).then(
+        (ServerSocket myUser) {
               serverSocket = myUser;
               myUser.listen(handleConnectedUser);
-            }));
+        }
+      )
+    );
   }
 
   void sendPublicKey(Socket receiverSocket) {
-    sendMessage(
-        Message(type: Message.PUBLIC_KEY, value: keyPair.publicKeyAsPem()),
-        receiverSocket);
+    sendMessage(Message(type: Message.PUBLIC_KEY,value: keyPair.publicKeyAsPem()), receiverSocket);
   }
 
   void sendMessage(Message message, Socket destination) {
     String json = jsonEncode(message);
+    destination.encoding = utf8;
     destination.write(json + config.messageSeparator);
   }
 
   void receiveMessages(Uint8List data) {
-    List<String> messageStrings = String.fromCharCodes(data).trim().split(config.messageSeparator);
-    for(final messageString in messageStrings){
-      if(messageString.length > 0) {
+    List<String> messageStrings = utf8.decode(data).trim().split(config.messageSeparator);
+    for (final messageString in messageStrings){
+      if (messageString.length > 0) {
         print("[INFO] Received message: " + messageString);
         Message message = decodeMessage(messageString);
-        print("[INFO] Decoded message");
+        print("[INFO] Decoded message: " + message.toString());
         handleMessage(message);
         print("[INFO] Handled message");
       }
@@ -122,26 +124,26 @@ class TcpConnection {
     }
     String cipher_text = encrypt(sessionKey, connectedPublicKey!.publicKey);
 
-    sendMessage(
-        Message(type: Message.SESSION_KEY, value: cipher_text), destination);
+    sendMessage(Message(type: Message.SESSION_KEY, value: cipher_text), destination);
   }
 
   void connectToUser(String receiverIP) {
     serverSocket!.close(); //close server, because you are connected
     Socket.connect(receiverIP, 4567).then((contactSocket) async {
-      print(
-          'Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
+      print('[INFO] Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 
       sendPublicKey(contactSocket);
       sendSessionKey(contactSocket);
-
+      
       goToCommunicationPage();
 
-      // listen for messages
-      contactSocket.listen((data) => receiveMessages(data), onDone: () {
-        print("Connection closed");
-        contactSocket.destroy();
-      });
+      contactSocket.listen(
+        (data) => receiveMessages(data),
+        onDone: () {
+          print("[INFO] Connection closed");
+          contactSocket.destroy();
+        }
+      );
 
       sendMessage(Message(value: "elo elo 123 heloł"), contactSocket);
       sendMessage(Message(value: "hahahahahaha"), contactSocket);
@@ -154,17 +156,18 @@ class TcpConnection {
 // \__/ .__) |__ |  \    /   \ \__, \__, |__ |     |  | | \| \__|    \__, \__/ | \| | \| |__ \__,  |  | \__/ | \|
 
   void handleConnectedUser(Socket connectedUserSocket) async {
-    print(
-        'Connection from ${connectedUserSocket.remoteAddress.address}:${connectedUserSocket.remotePort}');
+    print('[INFO] Connection from ${connectedUserSocket.remoteAddress.address}:${connectedUserSocket.remotePort}');
 
     sendPublicKey(connectedUserSocket);
 
     goToCommunicationPage();
 
-    // listen for messages
-    connectedUserSocket.listen((data) => receiveMessages(data), onDone: () {
-      print("Connection closed");
-      connectedUserSocket.destroy();
-    });
+    connectedUserSocket.listen(
+      (data) => receiveMessages(data),
+      onDone: () {
+        print("[INFO] Connection closed");
+        connectedUserSocket.destroy();
+      }
+    );
   }
 }
