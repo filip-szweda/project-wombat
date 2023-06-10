@@ -80,8 +80,11 @@ class TcpConnection {
     List<String> messageStrings = String.fromCharCodes(data).trim().split(config.messageSeparator);
     for(final messageString in messageStrings){
       if(messageString.length > 0) {
+        print("[INFO] Received message: " + messageString);
         Message message = decodeMessage(messageString);
+        print("[INFO] Decoded message");
         handleMessage(message);
+        print("[INFO] Handled message");
       }
     }
   }
