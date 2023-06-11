@@ -1,6 +1,6 @@
 import 'package:encrypt/encrypt.dart';
 import 'package:flutter/material.dart';
-import 'package:project_wombat/pages/communication/communication_page.dart';
+import 'package:project_wombat/pages/communication_page.dart';
 import 'package:project_wombat/utils/tcp_connection.dart';
 
 import '../utils/key_pair.dart';

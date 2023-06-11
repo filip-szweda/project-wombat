@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:project_wombat/pages/communication/receive_messages_widget.dart';
-import 'package:project_wombat/pages/communication/send_messages_widget.dart';
+import 'package:project_wombat/pages/communication_page/receive_messages_widget.dart';
+import 'package:project_wombat/pages/communication_page/send_messages_widget.dart';
 
 class CommunicationPage extends StatelessWidget {
   CommunicationPage({super.key});

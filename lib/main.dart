@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project_wombat/pages/connect_page.dart';
 import 'package:project_wombat/pages/login_page.dart';
-import 'package:project_wombat/pages/communication/communication_page.dart';
+import 'package:project_wombat/pages/communication_page.dart';
 
 void main() => runApp(const FileSharer());
 
