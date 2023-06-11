@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:project_wombat/utils/tcp_connection.dart';
 
 class SendMessagesWidget extends StatelessWidget {
-  const SendMessagesWidget({super.key});
+  TcpConnection tcpConnection;
+  SendMessagesWidget({required this.tcpConnection, super.key});
 
   @override
   Widget build(BuildContext context) {
+    String messageText = "";
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -20,6 +23,9 @@ class SendMessagesWidget extends StatelessWidget {
               labelText: 'Type a message',
               border: OutlineInputBorder(),
             ),
+            onChanged: (value) {
+              messageText = value;
+            },
           ),
         ),
         Flexible(
@@ -33,7 +39,9 @@ class SendMessagesWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  this.tcpConnection.sendString(messageText);
+                },
                 child: Text("Send"),
               ),
               SizedBox(

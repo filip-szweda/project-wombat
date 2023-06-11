@@ -12,6 +12,7 @@ import 'package:uuid/uuid.dart';
 class TcpConnection {
   late KeyPair keyPair;
   ServerSocket? serverSocket;
+  Socket? contactSocket;
   Function goToCommunicationPage;
   encrypt_package.IV iv = encrypt_package.IV(Uint8List(16));
   KeyPair? connectedPublicKey;
@@ -68,14 +69,18 @@ class TcpConnection {
     );
   }
 
-  void sendPublicKey(Socket receiverSocket) {
-    sendMessage(Message(type: Message.PUBLIC_KEY,value: keyPair.publicKeyAsPem()), receiverSocket);
+  void sendMessage(Message message) {
+    String json = jsonEncode(message);
+    this.contactSocket!.encoding = utf8;
+    this.contactSocket!.write(json + config.messageSeparator);
   }
 
-  void sendMessage(Message message, Socket destination) {
-    String json = jsonEncode(message);
-    destination.encoding = utf8;
-    destination.write(json + config.messageSeparator);
+  void sendPublicKey() {
+    sendMessage(Message(type: Message.PUBLIC_KEY,value: keyPair.publicKeyAsPem()));
+  }
+
+  void sendString(String string) {
+    sendMessage(Message(value: string));
   }
 
   void receiveMessages(Uint8List data) {
@@ -117,14 +122,14 @@ class TcpConnection {
 // |  | (__' |__ |__)    | |\ | |  |  |  /_\   |  | |\ | / __    /  ` /  \ |\ | |\ | |__ /  `  |  | /  \ |\ |
 // \__/ .__) |__ |  \    | | \| |  |  | /   \  |  | | \| \__|    \__, \__/ | \| | \| |__ \__,  |  | \__/ | \|
 
-  void sendSessionKey(Socket destination) async {
+  void sendSessionKey() async {
     sessionKey = Uuid().v4();
     while (connectedPublicKey == null) {
       await Future.delayed(Duration(milliseconds: 100));
     }
     String cipher_text = encrypt(sessionKey, connectedPublicKey!.publicKey);
 
-    sendMessage(Message(type: Message.SESSION_KEY, value: cipher_text), destination);
+    sendMessage(Message(type: Message.SESSION_KEY, value: cipher_text));
   }
 
   void connectToUser(String receiverIP) {
@@ -132,8 +137,10 @@ class TcpConnection {
     Socket.connect(receiverIP, 4567).then((contactSocket) async {
       print('[INFO] Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 
-      sendPublicKey(contactSocket);
-      sendSessionKey(contactSocket);
+      this.contactSocket = contactSocket;
+
+      sendPublicKey();
+      sendSessionKey();
       
       goToCommunicationPage();
 
@@ -145,9 +152,9 @@ class TcpConnection {
         }
       );
 
-      sendMessage(Message(value: "elo elo 123 heloł"), contactSocket);
-      sendMessage(Message(value: "hahahahahaha"), contactSocket);
-      sendMessage(Message(value: ":<"), contactSocket);
+      sendMessage(Message(value: "elo elo 123 heloł"));
+      sendMessage(Message(value: "hahahahahaha"));
+      sendMessage(Message(value: ":<"));
     });
   }
 
@@ -155,18 +162,20 @@ class TcpConnection {
 // |  | (__' |__ |__)     /_\  /  ` /  ` |__ |__)  |  | |\ | / __    /  ` /  \ |\ | |\ | |__ /  `  |  | /  \ |\ |
 // \__/ .__) |__ |  \    /   \ \__, \__, |__ |     |  | | \| \__|    \__, \__/ | \| | \| |__ \__,  |  | \__/ | \|
 
-  void handleConnectedUser(Socket connectedUserSocket) async {
-    print('[INFO] Connection from ${connectedUserSocket.remoteAddress.address}:${connectedUserSocket.remotePort}');
+  void handleConnectedUser(Socket contactSocket) async {
+    print('[INFO] Connection from ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 
-    sendPublicKey(connectedUserSocket);
+    this.contactSocket = contactSocket;
+
+    sendPublicKey();
 
     goToCommunicationPage();
 
-    connectedUserSocket.listen(
+    contactSocket.listen(
       (data) => receiveMessages(data),
       onDone: () {
         print("[INFO] Connection closed");
-        connectedUserSocket.destroy();
+        contactSocket.destroy();
       }
     );
   }

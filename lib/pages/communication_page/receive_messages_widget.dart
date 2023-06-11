@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:project_wombat/utils/tcp_connection.dart';
 
 class ReceiveMessagesWidget extends StatelessWidget {
-  ReceiveMessagesWidget({Key? key}) : super(key: key);
+  TcpConnection tcpConnection;
+  ReceiveMessagesWidget({required this.tcpConnection, Key? key}) : super(key: key);
 
   final List<String> messages = [];
 

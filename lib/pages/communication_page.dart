@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:project_wombat/pages/communication_page/receive_messages_widget.dart';
 import 'package:project_wombat/pages/communication_page/send_messages_widget.dart';
+import 'package:project_wombat/utils/tcp_connection.dart';
 
 class CommunicationPage extends StatelessWidget {
   CommunicationPage({super.key});
 
   static const String routeName = '/send';
 
-  //TcpConnection tcpConnection;
+  late TcpConnection tcpConnection;
 
   @override
   Widget build(BuildContext context) {
-    //tcpConnection = ModalRoute.of(context)!.settings.arguments as TcpConnection;
+    tcpConnection = ModalRoute.of(context)!.settings.arguments as TcpConnection;
     return Scaffold(
       appBar: AppBar(
         title: Text("Send Messages"),
@@ -21,11 +22,11 @@ class CommunicationPage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            ReceiveMessagesWidget(),
+            ReceiveMessagesWidget(tcpConnection: tcpConnection),
             SizedBox(
               height: 20,
             ),
-            SendMessagesWidget(),
+            SendMessagesWidget(tcpConnection: tcpConnection),
           ],
         ),
       ), // This trailing comma makes auto-formatting nicer for build methods.
