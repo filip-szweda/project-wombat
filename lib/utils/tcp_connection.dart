@@ -19,6 +19,7 @@ class TcpConnection {
   encrypt_package.IV iv = encrypt_package.IV(Uint8List(16));
   KeyPair? connectedPublicKey;
   String sessionKey = "Not initialized";
+  encrypt_package.Encrypter? encrypter;
 
   encrypt_package.AESMode cipherMode = encrypt_package.AESMode.cbc;
 
@@ -51,17 +52,10 @@ class TcpConnection {
     return "[ERROR] IPv4 address for Ethernet or Wi-Fi interface not found";
   }
 
-  encrypt_package.Encrypter prepareEncrypterForKey(Uint8List keyChars) {
-    encrypt_package.Key key = encrypt_package.Key(keyChars);
-    print("[INFO] Original key length: ${key.length}");
-    // key must be 32 bytes in length
-    key = key.stretch(32);
-    return encrypt_package.Encrypter(
-      encrypt_package.AES(
-        key,
-        mode: cipherMode,
-      ),
-    );
+  encrypt_package.Encrypter prepareEncrypterForKey(String sessionKey) {
+    Uint8List sessionKeyChars = Uint8List.fromList(sessionKey.codeUnits);
+    encrypt_package.Key key = encrypt_package.Key(sessionKeyChars);
+    return encrypt_package.Encrypter(encrypt_package.AES(key, mode: this.cipherMode));
   }
 
   void startListeningForConnection() {
@@ -86,12 +80,14 @@ class TcpConnection {
   }
 
   void sendString(String string) {
-    sendMessage(Message(value: string));
+    encrypt_package.Encrypted encrypted = encrypter!.encrypt(string, iv: iv);
+    sendMessage(Message(type: Message.DEFAULT, value: encrypted.base64));
   }
 
   void receiveMessages(Uint8List data) {
+    // with multipart files the last element may not be the end of the file
     List<String> messageStrings = utf8.decode(data).trim().split(config.messageSeparator);
-    for (final messageString in messageStrings){
+    for (String messageString in messageStrings) {
       if (messageString.length > 0) {
         print("[INFO] Received message: " + messageString);
         Message message = decodeMessage(messageString);
@@ -111,14 +107,14 @@ class TcpConnection {
     switch (message.type) {
       case Message.PUBLIC_KEY:
         connectedPublicKey = KeyPair.fromPublicKeyPem(message.value);
-        print(message.value);
         break;
       case Message.SESSION_KEY:
-        String decrypted = decrypt(message.value, keyPair.privateKey!);
-        print(message.value);
-        print(decrypted);
+        String decryptedSessionKey = decrypt(message.value, keyPair.privateKey!);
+        encrypter = prepareEncrypterForKey(decryptedSessionKey);
         break;
       case Message.DEFAULT:
+        message.value = encrypter!.decrypt(encrypt_package.Encrypted.fromBase64(message.value), iv: iv);
+        print("[INFO] Decrypted message");
         print(message.value);
         showMessage(message);
         break;
@@ -130,7 +126,9 @@ class TcpConnection {
 // \__/ .__) |__ |  \    | | \| |  |  | /   \  |  | | \| \__|    \__, \__/ | \| | \| |__ \__,  |  | \__/ | \|
 
   void sendSessionKey() async {
-    sessionKey = Uuid().v4();
+    sessionKey = Uuid().v4().replaceAll("-", "");
+    encrypter = prepareEncrypterForKey(sessionKey);
+
     while (connectedPublicKey == null) {
       await Future.delayed(Duration(milliseconds: 100));
     }
@@ -158,10 +156,6 @@ class TcpConnection {
           contactSocket.destroy();
         }
       );
-
-      sendMessage(Message(value: "elo elo 123 heloł"));
-      sendMessage(Message(value: "hahahahahaha"));
-      sendMessage(Message(value: ":<"));
     });
   }
 
