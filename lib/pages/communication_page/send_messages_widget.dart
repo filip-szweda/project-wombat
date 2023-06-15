@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project_wombat/utils/tcp_connection.dart';
 
 class SendMessagesWidget extends StatelessWidget {
-  TcpConnection tcpConnection;
+  final TcpConnection tcpConnection;
   SendMessagesWidget({required this.tcpConnection, super.key});
 
   @override

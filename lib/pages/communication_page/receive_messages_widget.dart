@@ -1,11 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:project_wombat/utils/message.dart';
 import 'package:project_wombat/utils/tcp_connection.dart';
 
-class ReceiveMessagesWidget extends StatelessWidget {
-  TcpConnection tcpConnection;
-  ReceiveMessagesWidget({required this.tcpConnection, Key? key}) : super(key: key);
+class ReceiveMessagesWidget extends StatefulWidget {
+  final TcpConnection tcpConnection;
 
-  final List<String> messages = [];
+  ReceiveMessagesWidget({required this.tcpConnection, super.key});
+
+  @override
+  State<ReceiveMessagesWidget> createState() => _ReceiveMessagesWidgetState();
+}
+
+class _ReceiveMessagesWidgetState extends State<ReceiveMessagesWidget> {
+  late List<Message> messages;
+
+  @override
+  void initState() {
+    messages = [];
+    widget.tcpConnection.setShowMessage((message) => addMessage(message));
+    super.initState();
+  }
+
+  void addMessage(Message message) {
+    setState(() {
+      messages.add(message);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +35,10 @@ class ReceiveMessagesWidget extends StatelessWidget {
         child: ListView(
             //reverse: true,
             padding: EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-            children: messages.map((message) => MessageBubble(message, "test", false)).toList()),
+            children: messages
+                .map((message) =>
+                    MessageBubble(message.value, message.sender, false))
+                .toList()),
       ),
     );
   }
@@ -33,21 +56,21 @@ class MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     BorderRadiusGeometry borderRadiusGeometry = isUser == true
         ? BorderRadius.only(
-      topLeft: Radius.circular(30),
-      bottomRight: Radius.circular(30),
-      bottomLeft: Radius.circular(30),
-    )
+            topLeft: Radius.circular(30),
+            bottomRight: Radius.circular(30),
+            bottomLeft: Radius.circular(30),
+          )
         : BorderRadius.only(
-      topRight: Radius.circular(30),
-      bottomRight: Radius.circular(30),
-      bottomLeft: Radius.circular(30),
-    );
+            topRight: Radius.circular(30),
+            bottomRight: Radius.circular(30),
+            bottomLeft: Radius.circular(30),
+          );
 
     Color color = isUser == true ? Colors.lightBlueAccent : Colors.white;
     Color fontColor = isUser == true ? Colors.white : Colors.black54;
 
     CrossAxisAlignment crossAxisAlignment =
-    isUser == true ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+        isUser == true ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
