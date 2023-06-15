@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -14,6 +15,7 @@ class TcpConnection {
   ServerSocket? serverSocket;
   Socket? contactSocket;
   Function goToCommunicationPage;
+  Function(Message) showMessage = (message) {};
   encrypt_package.IV iv = encrypt_package.IV(Uint8List(16));
   KeyPair? connectedPublicKey;
   String sessionKey = "Not initialized";
@@ -28,6 +30,10 @@ class TcpConnection {
 
   void setCipherMode(encrypt_package.AESMode mode) {
     this.cipherMode = mode;
+  }
+
+  void setShowMessage(Function(Message) showMessage) {
+    this.showMessage = showMessage;
   }
 
 //  __   __  ___               __   __  __   __
@@ -114,6 +120,7 @@ class TcpConnection {
         break;
       case Message.DEFAULT:
         print(message.value);
+        showMessage(message);
         break;
     }
   }
