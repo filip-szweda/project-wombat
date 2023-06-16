@@ -1,13 +1,34 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:project_wombat/utils/tcp_connection.dart';
+import 'package:file_picker/file_picker.dart';
 
 class SendMessagesWidget extends StatelessWidget {
   final TcpConnection tcpConnection;
   SendMessagesWidget({required this.tcpConnection, super.key});
+  TextEditingController messageController = TextEditingController();
+  String? messageText;
+  File? attachedFile;
+
+  void clearMessage() {
+    messageController.clear;
+    messageText = null;
+  }
+
+  void clearAttachedFile() {
+    attachedFile = null;
+  }
+
+  void attachFile() async {
+    FilePickerResult? filePickerResult = await FilePicker.platform.pickFiles();
+    if (filePickerResult != null && filePickerResult.files.single.path != null) {
+      attachedFile = File(filePickerResult.files.single.path!);
+      print("[INFO] Attached file: " + attachedFile!.path);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    String messageText = "";
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -15,6 +36,7 @@ class SendMessagesWidget extends StatelessWidget {
         Flexible(
           flex: 6,
           child: TextField(
+            controller: messageController,
             keyboardType: TextInputType.multiline,
             minLines: 8,
             maxLines: 8,
@@ -40,7 +62,14 @@ class SendMessagesWidget extends StatelessWidget {
             children: [
               ElevatedButton(
                 onPressed: () {
-                  this.tcpConnection.sendString(messageText);
+                  if (messageText != null) {
+                    this.tcpConnection.sendString(messageText!);
+                    clearMessage();
+                  } 
+                  if (attachedFile != null) {
+                    this.tcpConnection.sendFile();
+                    clearAttachedFile();
+                  }
                 },
                 child: Text("Send"),
               ),
@@ -48,8 +77,10 @@ class SendMessagesWidget extends StatelessWidget {
                 height: 10,
               ),
               ElevatedButton(
-                onPressed: () {},
-                child: Text("Send file"),
+                onPressed: () {
+                  attachFile();
+                },
+                child: Text("Attach File"),
               )
             ],
           ),

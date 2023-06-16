@@ -84,6 +84,10 @@ class TcpConnection {
     sendMessage(Message(type: Message.DEFAULT, value: encrypted.base64));
   }
 
+  void sendFile() {
+    
+  }
+
   void receiveMessages(Uint8List data) {
     // with multipart files the last element may not be the end of the file
     List<String> messageStrings = utf8.decode(data).trim().split(config.messageSeparator);
