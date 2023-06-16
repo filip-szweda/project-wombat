@@ -18,4 +18,8 @@ class Message {
   static Message fromJson(Map<String, dynamic> json) {
     return Message(type: json['type'], value: json['value'], sender: json['sender']);
   }
+
+  String toString() {
+    return "{\"type\": $type, \"value\": $value, \"sender\": $sender}";
+  }
 }
