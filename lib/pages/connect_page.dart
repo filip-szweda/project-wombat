@@ -19,6 +19,7 @@ class _ConnectPageState extends State<ConnectPage> {
   late KeyPair keyPair;
   List<AESMode> cipherModes = [AESMode.cbc, AESMode.ecb];
   late AESMode actualDropdownValue;
+  String ipAddress = "";
 
   @override
   void initState() {
@@ -36,7 +37,6 @@ class _ConnectPageState extends State<ConnectPage> {
   Widget build(BuildContext context) {
     keyPair = ModalRoute.of(context)!.settings.arguments as KeyPair;
     tcpConnection.setKeyPair(keyPair);
-    String ip = "";
 
     return Scaffold(
       appBar: AppBar(
@@ -47,13 +47,13 @@ class _ConnectPageState extends State<ConnectPage> {
           TextFormField(
             decoration: const InputDecoration(labelText: 'Input IP'),
             onChanged: (value) {
-              ip = value;
+              ipAddress = value;
             },
           ),
           TextButton(
             onPressed: () {
               tcpConnection.setCipherMode(actualDropdownValue);
-              tcpConnection.connectToUser(ip);
+              tcpConnection.connectToUser(ipAddress);
             },
             child: Text("Connect"),
           ),
@@ -74,6 +74,7 @@ class _ConnectPageState extends State<ConnectPage> {
               }).toList(),
               onChanged: (mode) => setState(() {
                     actualDropdownValue = mode!;
+                    ipAddress = ipAddress;
                   })),
         ],
       ),
