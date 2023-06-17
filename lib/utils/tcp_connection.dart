@@ -4,9 +4,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:encrypt/encrypt.dart' as encrypt_package;
+import 'package:path/path.dart';
+import 'package:project_wombat/config.dart' as config;
 import 'package:project_wombat/utils/key_pair.dart';
 import 'package:project_wombat/utils/message.dart';
-import 'package:project_wombat/config.dart' as config;
 import 'package:rsa_encrypt/rsa_encrypt.dart';
 import 'package:uuid/uuid.dart';
 
@@ -21,6 +22,9 @@ class TcpConnection {
   String sessionKey = "Not initialized";
   encrypt_package.Encrypter? encrypter;
   String id;
+
+  String multipartName = "";
+  String multipartContent = "";
 
   encrypt_package.AESMode cipherMode = encrypt_package.AESMode.cbc;
 
@@ -85,15 +89,41 @@ class TcpConnection {
 
   void sendString(String string) {
     var messageToBeShown =
-    Message(type: Message.DEFAULT, value: string, sender: id);
+        Message(type: Message.DEFAULT, value: string, sender: id);
     showMessage(messageToBeShown);
     encrypt_package.Encrypted encrypted = encrypter!.encrypt(string, iv: iv);
     var messageToBeSent =
-    Message(type: Message.DEFAULT, value: encrypted.base64, sender: id);
+        Message(type: Message.DEFAULT, value: encrypted.base64, sender: id);
     sendMessage(messageToBeSent);
   }
 
-  void sendFile() {}
+  bool sendFile(File file) {
+    int packetSize = 512;
+    Uint8List bytes = file.readAsBytesSync();
+    List<Uint8List> frames = [];
+    for (var i = 0; i < bytes.length; i += packetSize) {
+      frames.add(bytes.sublist(
+          i, i + packetSize > bytes.length ? bytes.length : i + packetSize));
+    }
+    sendMessage(
+      Message(
+          value: base64Encode(utf8.encode(basename(file.path))),
+          sender: id,
+          type: Message.MULTIPART_START),
+    );
+    frames.forEach(
+      (element) => sendMessage(
+        Message(
+            value: base64Encode(element),
+            type: Message.MULTIPART_CONTINUE,
+            sender: id),
+      ),
+    );
+    sendMessage(
+      Message(value: "Not important", type: Message.MULTIPART_END, sender: id),
+    );
+    return true;
+  }
 
   void receiveMessages(Uint8List data) {
     // with multipart files the last element may not be the end of the file
@@ -127,14 +157,33 @@ class TcpConnection {
         encrypter = prepareEncrypterForKey(decryptedSessionKey);
         break;
       case Message.DEFAULT:
-        message.value = encrypter!.decrypt(
-            encrypt_package.Encrypted.fromBase64(message.value),
-            iv: iv);
+        message.value = decryptString(message.value);
         print("[INFO] Decrypted message");
         print(message.value);
         showMessage(message);
         break;
+      case Message.MULTIPART_START:
+        multipartName = decryptString(message.value);
+        multipartContent = "";
+        break;
+      case Message.MULTIPART_CONTINUE:
+        print(message.value.length);
+        multipartContent += decryptString(message.value);
+        break;
+      case Message.MULTIPART_END:
+        Directory(config.receivedFilesPath).createSync();
+        File("${config.receivedFilesPath}/$multipartName")
+            .writeAsBytes(base64Decode(multipartContent));
+        showMessage(Message(
+            value: "File ${multipartName} was received",
+            sender: message.sender));
+        break;
     }
+  }
+
+  String decryptString(String message) {
+    return encrypter!
+        .decrypt(encrypt_package.Encrypted.fromBase64(message), iv: iv);
   }
 
 //       __   __  __              ___     _   ___         __      __   __             __  __  ___    __

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,6 +26,15 @@ void main() {
     String decrypted = decrypt(encrypted, keyPair.privateKey!);
     expect(decrypted, dataToEncrypt);
   });
+
+  test("savesReceivedFileFromString",
+          () async {
+        var inputFile = await File("test/resources/cubes.png").readAsBytes();
+        String inputString = base64Encode(inputFile);
+        print(inputFile.length);
+        var bytesAgain = base64Decode(inputString);
+        File("test/resources/savedCubes.png").writeAsBytes(bytesAgain);
+      });
 
   test("encryptsDataWithSessionKeySendsItAndSuccessfullyDecrypts", (){
     encrypt_package.IV iv = encrypt_package.IV(Uint8List(16));
