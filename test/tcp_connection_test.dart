@@ -16,7 +16,7 @@ void main() {
     RsaKeyHelper helper = RsaKeyHelper();
     keyPair = KeyPair(
         keyPair: await helper.computeRSAKeyPair(helper.getSecureRandom()));
-    tcpConnection = TcpConnection(goToCommunicationPage: (){});
+    tcpConnection = TcpConnection(goToCommunicationPage: () {});
   });
 
   test("encryptsDataWithPublicKeyAndSuccessfullyDecryptsThemWithPrivateKey",
@@ -27,23 +27,45 @@ void main() {
     expect(decrypted, dataToEncrypt);
   });
 
-  test("savesReceivedFileFromString",
-          () async {
-        var inputFile = await File("test/resources/cubes.png").readAsBytes();
-        String inputString = base64Encode(inputFile);
-        print(inputFile.length);
-        var bytesAgain = base64Decode(inputString);
-        File("test/resources/savedCubes.png").writeAsBytes(bytesAgain);
-      });
+  test("savesReceivedFileFromString", () async {
+    var sessionKey = Uuid().v4().replaceAll("-", "");
+    encrypt_package.Encrypter encrypter =
+    tcpConnection.prepareEncrypterForKey(sessionKey);
+    tcpConnection.encrypter = encrypter;
+    String result = "";
+    File inputFile = await File("test/resources/cubes.png");
+    int packetSize = 256;
+    Uint8List bytes = inputFile.readAsBytesSync();
+    String b64 = base64Encode(bytes);
+    List<Uint8List> frames = [];
+    for (var i = 0; i < bytes.length; i += packetSize) {
+      frames.add(bytes.sublist(
+          i, i + packetSize > bytes.length ? bytes.length : i + packetSize));
+    }
 
-  test("encryptsDataWithSessionKeySendsItAndSuccessfullyDecrypts", (){
+
+    frames.forEach((element) {
+      var value = tcpConnection.encryptString(base64Encode(element));
+      var decryptString = tcpConnection.decryptString(value);
+      result += decryptString;
+      //print("decrypted string: ${decryptString}");
+      //print("actual result: ${result}");
+    });
+    expect(result, b64);
+    //var bytesAgain = base64Decode(result);
+    //File("test/resources/savedCubes.png").writeAsBytes(bytesAgain);
+  });
+
+  test("encryptsDataWithSessionKeySendsItAndSuccessfullyDecrypts", () {
     encrypt_package.IV iv = encrypt_package.IV(Uint8List(16));
     var sessionKey = Uuid().v4().replaceAll("-", "");
     String dataToEncrypt = "test data to encrypt";
 
-    encrypt_package.Encrypter encrypter = tcpConnection.prepareEncrypterForKey(sessionKey);
+    encrypt_package.Encrypter encrypter =
+        tcpConnection.prepareEncrypterForKey(sessionKey);
 
-    encrypt_package.Encrypted encrypted = encrypter.encrypt(dataToEncrypt, iv: iv);
+    encrypt_package.Encrypted encrypted =
+        encrypter.encrypt(dataToEncrypt, iv: iv);
 
     Message message = Message(type: Message.DEFAULT, value: encrypted.base64);
 

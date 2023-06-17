@@ -91,11 +91,13 @@ class TcpConnection {
     var messageToBeShown =
         Message(type: Message.DEFAULT, value: string, sender: id);
     showMessage(messageToBeShown);
-    encrypt_package.Encrypted encrypted = encrypter!.encrypt(string, iv: iv);
+    String encrypted = encryptString(string);
     var messageToBeSent =
-        Message(type: Message.DEFAULT, value: encrypted.base64, sender: id);
+        Message(type: Message.DEFAULT, value: encrypted, sender: id);
     sendMessage(messageToBeSent);
   }
+
+  String encryptString(String string) => encrypter!.encrypt(string, iv: iv).base64;
 
   bool sendFile(File file) {
     int packetSize = 512;
@@ -107,14 +109,14 @@ class TcpConnection {
     }
     sendMessage(
       Message(
-          value: base64Encode(utf8.encode(basename(file.path))),
+          value: encryptString(basename(file.path)),
           sender: id,
           type: Message.MULTIPART_START),
     );
     frames.forEach(
       (element) => sendMessage(
         Message(
-            value: base64Encode(element),
+            value: encryptString(base64Encode(element)),
             type: Message.MULTIPART_CONTINUE,
             sender: id),
       ),
