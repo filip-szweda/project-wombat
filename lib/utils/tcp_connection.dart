@@ -97,15 +97,23 @@ class TcpConnection {
     sendMessage(messageToBeSent);
   }
 
-  String encryptString(String string) => encrypter!.encrypt(string, iv: iv).base64;
+  String encryptString(String string) =>
+      encrypter!.encrypt(string, iv: iv).base64;
 
   bool sendFile(File file) {
+    var messageToBeShown = Message(
+        type: Message.DEFAULT, value: "Sent file: ${file.path}", sender: id);
+    showMessage(messageToBeShown);
     int packetSize = 512;
     Uint8List bytes = file.readAsBytesSync();
-    List<Uint8List> frames = [];
-    for (var i = 0; i < bytes.length; i += packetSize) {
-      frames.add(bytes.sublist(
-          i, i + packetSize > bytes.length ? bytes.length : i + packetSize));
+    String base64data = base64Encode(bytes);
+    List<String> frames = [];
+    for (var i = 0; i < base64data.length; i += packetSize) {
+      frames.add(base64data.substring(
+          i,
+          i + packetSize > base64data.length
+              ? base64data.length
+              : i + packetSize));
     }
     sendMessage(
       Message(
@@ -116,7 +124,7 @@ class TcpConnection {
     frames.forEach(
       (element) => sendMessage(
         Message(
-            value: encryptString(base64Encode(element)),
+            value: encryptString(element),
             type: Message.MULTIPART_CONTINUE,
             sender: id),
       ),
@@ -206,7 +214,7 @@ class TcpConnection {
 
   void connectToUser(String receiverIP) {
     serverSocket!.close(); //close server, because you are connected
-    Socket.connect(receiverIP, 4567).then((contactSocket) async {
+    Socket.connect(receiverIP, 4568).then((contactSocket) async {
       print(
           '[INFO] Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 
