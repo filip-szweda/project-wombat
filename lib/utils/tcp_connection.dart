@@ -20,10 +20,11 @@ class TcpConnection {
   KeyPair? connectedPublicKey;
   String sessionKey = "Not initialized";
   encrypt_package.Encrypter? encrypter;
+  String id;
 
   encrypt_package.AESMode cipherMode = encrypt_package.AESMode.cbc;
 
-  TcpConnection({required this.goToCommunicationPage});
+  TcpConnection({required this.goToCommunicationPage}) : id = Uuid().v4();
 
   void setKeyPair(KeyPair keyPair) {
     this.keyPair = keyPair;
@@ -46,6 +47,7 @@ class TcpConnection {
       // todo: better choose interface
       if (interface.name == "Ethernet" || interface.name == "Wi-Fi") {
         // todo: better choose ip address
+        print(interface.addresses);
         return interface.addresses[0].address;
       }
     }
@@ -55,7 +57,8 @@ class TcpConnection {
   encrypt_package.Encrypter prepareEncrypterForKey(String sessionKey) {
     Uint8List sessionKeyChars = Uint8List.fromList(sessionKey.codeUnits);
     encrypt_package.Key key = encrypt_package.Key(sessionKeyChars);
-    return encrypt_package.Encrypter(encrypt_package.AES(key, mode: this.cipherMode));
+    return encrypt_package.Encrypter(
+        encrypt_package.AES(key, mode: this.cipherMode));
   }
 
   void startListeningForConnection() {
@@ -76,21 +79,26 @@ class TcpConnection {
   }
 
   void sendPublicKey() {
-    sendMessage(Message(type: Message.PUBLIC_KEY,value: keyPair.publicKeyAsPem()));
+    sendMessage(
+        Message(type: Message.PUBLIC_KEY, value: keyPair.publicKeyAsPem()));
   }
 
   void sendString(String string) {
+    var messageToBeShown =
+    Message(type: Message.DEFAULT, value: string, sender: id);
+    showMessage(messageToBeShown);
     encrypt_package.Encrypted encrypted = encrypter!.encrypt(string, iv: iv);
-    sendMessage(Message(type: Message.DEFAULT, value: encrypted.base64));
+    var messageToBeSent =
+    Message(type: Message.DEFAULT, value: encrypted.base64, sender: id);
+    sendMessage(messageToBeSent);
   }
 
-  void sendFile() {
-    
-  }
+  void sendFile() {}
 
   void receiveMessages(Uint8List data) {
     // with multipart files the last element may not be the end of the file
-    List<String> messageStrings = utf8.decode(data).trim().split(config.messageSeparator);
+    List<String> messageStrings =
+        utf8.decode(data).trim().split(config.messageSeparator);
     for (String messageString in messageStrings) {
       if (messageString.length > 0) {
         print("[INFO] Received message: " + messageString);
@@ -103,7 +111,8 @@ class TcpConnection {
   }
 
   Message decodeMessage(String messageString) {
-    Map<String, dynamic> json = jsonDecode(messageString) as Map<String, dynamic>;
+    Map<String, dynamic> json =
+        jsonDecode(messageString) as Map<String, dynamic>;
     return Message.fromJson(json);
   }
 
@@ -113,11 +122,14 @@ class TcpConnection {
         connectedPublicKey = KeyPair.fromPublicKeyPem(message.value);
         break;
       case Message.SESSION_KEY:
-        String decryptedSessionKey = decrypt(message.value, keyPair.privateKey!);
+        String decryptedSessionKey =
+            decrypt(message.value, keyPair.privateKey!);
         encrypter = prepareEncrypterForKey(decryptedSessionKey);
         break;
       case Message.DEFAULT:
-        message.value = encrypter!.decrypt(encrypt_package.Encrypted.fromBase64(message.value), iv: iv);
+        message.value = encrypter!.decrypt(
+            encrypt_package.Encrypted.fromBase64(message.value),
+            iv: iv);
         print("[INFO] Decrypted message");
         print(message.value);
         showMessage(message);
@@ -144,22 +156,20 @@ class TcpConnection {
   void connectToUser(String receiverIP) {
     serverSocket!.close(); //close server, because you are connected
     Socket.connect(receiverIP, 4567).then((contactSocket) async {
-      print('[INFO] Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
+      print(
+          '[INFO] Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 
       this.contactSocket = contactSocket;
 
       sendPublicKey();
       sendSessionKey();
-      
+
       goToCommunicationPage();
 
-      contactSocket.listen(
-        (data) => receiveMessages(data),
-        onDone: () {
-          print("[INFO] Connection closed");
-          contactSocket.destroy();
-        }
-      );
+      contactSocket.listen((data) => receiveMessages(data), onDone: () {
+        print("[INFO] Connection closed");
+        contactSocket.destroy();
+      });
     });
   }
 
@@ -168,7 +178,8 @@ class TcpConnection {
 // \__/ .__) |__ |  \    /   \ \__, \__, |__ |     |  | | \| \__|    \__, \__/ | \| | \| |__ \__,  |  | \__/ | \|
 
   void handleConnectedUser(Socket contactSocket) async {
-    print('[INFO] Connection from ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
+    print(
+        '[INFO] Connection from ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 
     this.contactSocket = contactSocket;
 
@@ -176,12 +187,9 @@ class TcpConnection {
 
     goToCommunicationPage();
 
-    contactSocket.listen(
-      (data) => receiveMessages(data),
-      onDone: () {
-        print("[INFO] Connection closed");
-        contactSocket.destroy();
-      }
-    );
+    contactSocket.listen((data) => receiveMessages(data), onDone: () {
+      print("[INFO] Connection closed");
+      contactSocket.destroy();
+    });
   }
 }

@@ -27,6 +27,10 @@ class _ReceiveMessagesWidgetState extends State<ReceiveMessagesWidget> {
     });
   }
 
+  bool isSender(String sender) {
+    return widget.tcpConnection.id == sender;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Expanded(
@@ -36,8 +40,8 @@ class _ReceiveMessagesWidgetState extends State<ReceiveMessagesWidget> {
             //reverse: true,
             padding: EdgeInsets.symmetric(horizontal: 10, vertical: 20),
             children: messages
-                .map((message) =>
-                    MessageBubble(message.value, message.sender, false))
+                .map((message) => MessageBubble(
+                    message.value, message.sender, isSender(message.sender)))
                 .toList()),
       ),
     );
