@@ -1,18 +1,22 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:project_wombat/utils/tcp_connection.dart';
+
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:path/path.dart';
+import 'package:project_wombat/utils/tcp_connection.dart';
 
 class SendMessagesWidget extends StatelessWidget {
   final TcpConnection tcpConnection;
+
   SendMessagesWidget({required this.tcpConnection, super.key});
+
   TextEditingController messageController = TextEditingController();
-  String? messageText;
+  String messageText = "";
   File? attachedFile;
 
   void clearMessage() {
-    messageController.clear;
-    messageText = null;
+    messageController.clear();
+    messageText = "";
   }
 
   void clearAttachedFile() {
@@ -21,8 +25,11 @@ class SendMessagesWidget extends StatelessWidget {
 
   void attachFile() async {
     FilePickerResult? filePickerResult = await FilePicker.platform.pickFiles();
-    if (filePickerResult != null && filePickerResult.files.single.path != null) {
+    if (filePickerResult != null &&
+        filePickerResult.files.single.path != null) {
       attachedFile = File(filePickerResult.files.single.path!);
+      messageController.text =
+          "File ${basename(attachedFile!.path)} was attached";
       print("[INFO] Attached file: " + attachedFile!.path);
     }
   }
@@ -62,13 +69,16 @@ class SendMessagesWidget extends StatelessWidget {
             children: [
               ElevatedButton(
                 onPressed: () {
-                  if (messageText != null) {
-                    this.tcpConnection.sendString(messageText!);
-                    clearMessage();
-                  } 
                   if (attachedFile != null) {
-                    this.tcpConnection.sendFile();
+                    print("Start of sending file");
+                    tcpConnection.sendFile(attachedFile!);
+                    print("File sent");
                     clearAttachedFile();
+                    clearMessage();
+                  }
+                  if (messageText.isNotEmpty) {
+                    this.tcpConnection.sendString(messageText);
+                    clearMessage();
                   }
                 },
                 child: Text("Send"),

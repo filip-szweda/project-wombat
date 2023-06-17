@@ -4,9 +4,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:encrypt/encrypt.dart' as encrypt_package;
+import 'package:path/path.dart';
+import 'package:project_wombat/config.dart' as config;
 import 'package:project_wombat/utils/key_pair.dart';
 import 'package:project_wombat/utils/message.dart';
-import 'package:project_wombat/config.dart' as config;
 import 'package:rsa_encrypt/rsa_encrypt.dart';
 import 'package:uuid/uuid.dart';
 
@@ -21,6 +22,9 @@ class TcpConnection {
   String sessionKey = "Not initialized";
   encrypt_package.Encrypter? encrypter;
   String id;
+
+  String multipartName = "";
+  String multipartContent = "";
 
   encrypt_package.AESMode cipherMode = encrypt_package.AESMode.cbc;
 
@@ -85,15 +89,51 @@ class TcpConnection {
 
   void sendString(String string) {
     var messageToBeShown =
-    Message(type: Message.DEFAULT, value: string, sender: id);
+        Message(type: Message.DEFAULT, value: string, sender: id);
     showMessage(messageToBeShown);
-    encrypt_package.Encrypted encrypted = encrypter!.encrypt(string, iv: iv);
+    String encrypted = encryptString(string);
     var messageToBeSent =
-    Message(type: Message.DEFAULT, value: encrypted.base64, sender: id);
+        Message(type: Message.DEFAULT, value: encrypted, sender: id);
     sendMessage(messageToBeSent);
   }
 
-  void sendFile() {}
+  String encryptString(String string) =>
+      encrypter!.encrypt(string, iv: iv).base64;
+
+  bool sendFile(File file) {
+    var messageToBeShown = Message(
+        type: Message.DEFAULT, value: "Sent file: ${file.path}", sender: id);
+    showMessage(messageToBeShown);
+    int packetSize = 512;
+    Uint8List bytes = file.readAsBytesSync();
+    String base64data = base64Encode(bytes);
+    List<String> frames = [];
+    for (var i = 0; i < base64data.length; i += packetSize) {
+      frames.add(base64data.substring(
+          i,
+          i + packetSize > base64data.length
+              ? base64data.length
+              : i + packetSize));
+    }
+    sendMessage(
+      Message(
+          value: encryptString(basename(file.path)),
+          sender: id,
+          type: Message.MULTIPART_START),
+    );
+    frames.forEach(
+      (element) => sendMessage(
+        Message(
+            value: encryptString(element),
+            type: Message.MULTIPART_CONTINUE,
+            sender: id),
+      ),
+    );
+    sendMessage(
+      Message(value: "Not important", type: Message.MULTIPART_END, sender: id),
+    );
+    return true;
+  }
 
   void receiveMessages(Uint8List data) {
     // with multipart files the last element may not be the end of the file
@@ -127,14 +167,33 @@ class TcpConnection {
         encrypter = prepareEncrypterForKey(decryptedSessionKey);
         break;
       case Message.DEFAULT:
-        message.value = encrypter!.decrypt(
-            encrypt_package.Encrypted.fromBase64(message.value),
-            iv: iv);
+        message.value = decryptString(message.value);
         print("[INFO] Decrypted message");
         print(message.value);
         showMessage(message);
         break;
+      case Message.MULTIPART_START:
+        multipartName = decryptString(message.value);
+        multipartContent = "";
+        break;
+      case Message.MULTIPART_CONTINUE:
+        print(message.value.length);
+        multipartContent += decryptString(message.value);
+        break;
+      case Message.MULTIPART_END:
+        Directory(config.receivedFilesPath).createSync();
+        File("${config.receivedFilesPath}/$multipartName")
+            .writeAsBytes(base64Decode(multipartContent));
+        showMessage(Message(
+            value: "File ${multipartName} was received",
+            sender: message.sender));
+        break;
     }
+  }
+
+  String decryptString(String message) {
+    return encrypter!
+        .decrypt(encrypt_package.Encrypted.fromBase64(message), iv: iv);
   }
 
 //       __   __  __              ___     _   ___         __      __   __             __  __  ___    __
@@ -155,7 +214,7 @@ class TcpConnection {
 
   void connectToUser(String receiverIP) {
     serverSocket!.close(); //close server, because you are connected
-    Socket.connect(receiverIP, 4567).then((contactSocket) async {
+    Socket.connect(receiverIP, 4568).then((contactSocket) async {
       print(
           '[INFO] Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 
