@@ -45,3 +45,4 @@ app.*.map.json
 
 /public_keys
 /private_keys
+/received_files

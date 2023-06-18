@@ -84,7 +84,7 @@ class MessageBubble extends StatelessWidget {
         children: [
           Text(
             sender,
-            style: TextStyle(fontSize: 12, color: Colors.black54),
+            style: TextStyle(fontSize: 12, color: Colors.white54),
           ),
           Material(
             borderRadius: borderRadiusGeometry,

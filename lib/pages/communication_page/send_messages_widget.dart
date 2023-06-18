@@ -71,9 +71,10 @@ class SendMessagesWidget extends StatelessWidget {
                 onPressed: () {
                   if (attachedFile != null) {
                     print("Start of sending file");
-                    tcpConnection.sendFile(attachedFile!);
+                    tcpConnection
+                        .sendFile(attachedFile!)
+                        .then((value) => clearAttachedFile());
                     print("File sent");
-                    clearAttachedFile();
                     clearMessage();
                   }
                   if (messageText.isNotEmpty) {

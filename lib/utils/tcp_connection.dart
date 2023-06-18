@@ -24,7 +24,7 @@ class TcpConnection {
   String id;
 
   String multipartName = "";
-  String multipartContent = "";
+  StringBuffer multipartContent = StringBuffer();
 
   encrypt_package.AESMode cipherMode = encrypt_package.AESMode.cbc;
 
@@ -66,14 +66,11 @@ class TcpConnection {
   }
 
   void startListeningForConnection() {
-    getIpV4().then(
-      (ip) => ServerSocket.bind(ip, 4567).then(
-        (ServerSocket myUser) {
-              serverSocket = myUser;
-              myUser.listen(handleConnectedUser);
-        }
-      )
-    );
+    getIpV4().then((ip) =>
+        ServerSocket.bind(ip, 4567).then((ServerSocket myUser) {
+          serverSocket = myUser;
+          myUser.listen(handleConnectedUser);
+        }));
   }
 
   void sendMessage(Message message) {
@@ -100,39 +97,37 @@ class TcpConnection {
   String encryptString(String string) =>
       encrypter!.encrypt(string, iv: iv).base64;
 
-  bool sendFile(File file) {
+  Future<bool> sendFile(File file) async {
+    Stopwatch stopwatch = Stopwatch()..start();
     var messageToBeShown = Message(
         type: Message.DEFAULT, value: "Sent file: ${file.path}", sender: id);
     showMessage(messageToBeShown);
-    int packetSize = 512;
+    int packetSize = 800;
     Uint8List bytes = file.readAsBytesSync();
     String base64data = base64Encode(bytes);
-    List<String> frames = [];
-    for (var i = 0; i < base64data.length; i += packetSize) {
-      frames.add(base64data.substring(
-          i,
-          i + packetSize > base64data.length
-              ? base64data.length
-              : i + packetSize));
-    }
+    String encrypted = encryptString(base64data);
     sendMessage(
       Message(
           value: encryptString(basename(file.path)),
           sender: id,
           type: Message.MULTIPART_START),
     );
-    frames.forEach(
-      (element) => sendMessage(
-        Message(
-            value: encryptString(element),
-            type: Message.MULTIPART_CONTINUE,
-            sender: id),
-      ),
-    );
+    for (var i = 0; i < encrypted.length; i += packetSize) {
+      String packet = encrypted.substring(
+          i,
+          i + packetSize > encrypted.length
+              ? encrypted.length
+              : i + packetSize);
+      sendMessage(
+          Message(value: packet, type: Message.MULTIPART_CONTINUE, sender: id));
+    }
+
     sendMessage(
       Message(value: "Not important", type: Message.MULTIPART_END, sender: id),
     );
-    return true;
+    print("All messages sent, it took ${stopwatch.elapsed}");
+    stopwatch.stop();
+    return Future(() => true);
   }
 
   void receiveMessages(Uint8List data) {
@@ -141,11 +136,11 @@ class TcpConnection {
         utf8.decode(data).trim().split(config.messageSeparator);
     for (String messageString in messageStrings) {
       if (messageString.length > 0) {
-        print("[INFO] Received message: " + messageString);
+        // print("[INFO] Received message: " + messageString);
         Message message = decodeMessage(messageString);
-        print("[INFO] Decoded message: " + message.toString());
+        // print("[INFO] Decoded message: " + message.toString());
         handleMessage(message);
-        print("[INFO] Handled message");
+        // print("[INFO] Handled message");
       }
     }
   }
@@ -174,16 +169,16 @@ class TcpConnection {
         break;
       case Message.MULTIPART_START:
         multipartName = decryptString(message.value);
-        multipartContent = "";
+        multipartContent.clear();
         break;
       case Message.MULTIPART_CONTINUE:
         print(message.value.length);
-        multipartContent += decryptString(message.value);
+        multipartContent.write(message.value);
         break;
       case Message.MULTIPART_END:
         Directory(config.receivedFilesPath).createSync();
-        File("${config.receivedFilesPath}/$multipartName")
-            .writeAsBytes(base64Decode(multipartContent));
+        File("${config.receivedFilesPath}/$multipartName").writeAsBytes(
+            base64Decode(decryptString(multipartContent.toString())));
         showMessage(Message(
             value: "File ${multipartName} was received",
             sender: message.sender));
@@ -214,7 +209,7 @@ class TcpConnection {
 
   void connectToUser(String receiverIP) {
     serverSocket!.close(); //close server, because you are connected
-    Socket.connect(receiverIP, 4568).then((contactSocket) async {
+    Socket.connect(receiverIP, 4567).then((contactSocket) async {
       print(
           '[INFO] Connected to: ${contactSocket.remoteAddress.address}:${contactSocket.remotePort}');
 

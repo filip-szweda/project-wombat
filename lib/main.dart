@@ -11,8 +11,7 @@ class FileSharer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(),
-      darkTheme: ThemeData.dark(),
+      theme: ThemeData.dark(),
       title: "File sharer",
       routes: {
         '/': (context) => const LoginPage(),

@@ -29,30 +29,41 @@ void main() {
   });
 
   test("savesReceivedFileFromString", () async {
+    Stopwatch stopwatch = Stopwatch()..start();
     var sessionKey = Uuid().v4().replaceAll("-", "");
     encrypt_package.Encrypter encrypter =
         tcpConnection.prepareEncrypterForKey(sessionKey);
     tcpConnection.encrypter = encrypter;
-    String result = "";
-    File inputFile = await File("test/resources/cubes.png");
+    File inputFile = await File("test/resources/500m1.txt");
     int packetSize = 512;
+    print("start ${stopwatch.elapsed}");
     Uint8List bytes = inputFile.readAsBytesSync();
+    print("file read as bytes ${stopwatch.elapsed}");
     String base64data = base64Encode(bytes);
+    print("base 64 string ready ${stopwatch.elapsed}");
+    String encrypted  = tcpConnection.encryptString(base64data);
+    print("string encoded ${stopwatch.elapsed}");
     List<String> frames = [];
-    for (var i = 0; i < base64data.length; i += packetSize) {
-      frames.add(base64data.substring(
+    for (var i = 0; i < encrypted.length; i += packetSize) {
+      frames.add(encrypted.substring(
           i,
-          i + packetSize > base64data.length
-              ? base64data.length
+          i + packetSize > encrypted.length
+              ? encrypted.length
               : i + packetSize));
     }
+    print("string made into parts ${stopwatch.elapsed}");
 
-    frames.forEach((element) {
-      var value = tcpConnection.encryptString(element);
-      var decryptString = tcpConnection.decryptString(value);
-      result += decryptString;
-    });
-    expect(result, base64data);
+    var stringBuffer = StringBuffer();
+
+    for(String s in frames) {
+      stringBuffer.write(s);
+    }
+
+    print("concatenated cipher ${stopwatch.elapsed}");
+    var decryptString = tcpConnection.decryptString(stringBuffer.toString());
+    print("deciphered result ${stopwatch.elapsed}");
+    expect(decryptString, base64data);
+    stopwatch.stop();
   });
 
   test("encryptsDataWithSessionKeySendsItAndSuccessfullyDecrypts", () {
