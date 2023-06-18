@@ -97,11 +97,12 @@ class TcpConnection {
   String encryptString(String string) =>
       encrypter!.encrypt(string, iv: iv).base64;
 
-  Future<bool> sendFile(File file) {
+  Future<bool> sendFile(File file) async {
+    Stopwatch stopwatch = Stopwatch()..start();
     var messageToBeShown = Message(
         type: Message.DEFAULT, value: "Sent file: ${file.path}", sender: id);
     showMessage(messageToBeShown);
-    int packetSize = 512;
+    int packetSize = 800;
     Uint8List bytes = file.readAsBytesSync();
     String base64data = base64Encode(bytes);
     String encrypted = encryptString(base64data);
@@ -124,6 +125,8 @@ class TcpConnection {
     sendMessage(
       Message(value: "Not important", type: Message.MULTIPART_END, sender: id),
     );
+    print("All messages sent, it took ${stopwatch.elapsed}");
+    stopwatch.stop();
     return Future(() => true);
   }
 
